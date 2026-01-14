@@ -1,0 +1,23 @@
+/*
+ * Global styles for the meal app. This file sets a few sensible
+ * defaults. You can use a utility-first framework like Tailwind CSS
+ * in your own project for faster styling, but here we provide minimal
+ * styles to keep the focus on the TypeScript and Supabase logic.
+ */
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: sans-serif;
+  background-color: #f8fafc;
+  color: #1f2937;
+}
+
+a {
+  text-decoration: none;
+}
+
+button {
+  cursor: pointer;
+}
