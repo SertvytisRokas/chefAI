@@ -5,6 +5,23 @@
 -- allergens, measurement and meal types. It assumes you are running
 -- Supabase/Postgres 14 or later with the auth schema enabled.
 
+-- Drop existing objects to allow re-running this script without manual cleanup
+DROP FUNCTION IF EXISTS public.match_recipe_templates(vector, integer) CASCADE;
+DROP TABLE IF EXISTS public.user_personalization CASCADE;
+DROP TABLE IF EXISTS public.user_answers CASCADE;
+DROP TABLE IF EXISTS public.questions CASCADE;
+DROP TABLE IF EXISTS public.shopping_list CASCADE;
+DROP TABLE IF EXISTS public.meal_plans CASCADE;
+DROP TABLE IF EXISTS public.user_preferences CASCADE;
+DROP TABLE IF EXISTS public.user_allergens CASCADE;
+DROP TABLE IF EXISTS public.fridge_items CASCADE;
+DROP TABLE IF EXISTS public.recipes CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+DROP TABLE IF EXISTS public.recipe_templates CASCADE;
+DROP TABLE IF EXISTS public.measurement_types CASCADE;
+DROP TABLE IF EXISTS public.meal_types CASCADE;
+DROP TABLE IF EXISTS public.diet_types CASCADE;
+
 -- Enable the pgcrypto extension for UUID generation (if not already)
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
@@ -21,134 +38,220 @@ CREATE TABLE IF NOT EXISTS public.meal_types (
   name VARCHAR(20) NOT NULL UNIQUE
 );
 
--- Measurement types: unit enumeration for fridge item quantities
+-- Measurement types: grams, liters, pieces etc. Again, stored in a
+-- dedicated table so you can easily add new units later.
 CREATE TABLE IF NOT EXISTS public.measurement_types (
   id SERIAL PRIMARY KEY,
-  name VARCHAR(50) NOT NULL UNIQUE
+  name VARCHAR(20) NOT NULL UNIQUE
 );
 
--- Profiles table extends auth.users with additional fields
-CREATE TABLE IF NOT EXISTS public.profiles (
-  user_id UUID PRIMARY KEY REFERENCES auth.users (id) ON DELETE CASCADE,
-  diet_type_id INTEGER REFERENCES public.diet_types (id),
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Fridge items belong to a user and represent ingredients stored in
--- their refrigerator. The measurement_type_id references the
--- measurement_types table.
-CREATE TABLE IF NOT EXISTS public.fridge_items (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  quantity NUMERIC NOT NULL,
-  measurement_type_id INTEGER NOT NULL REFERENCES public.measurement_types (id),
-  expiration_date DATE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- User allergens: stores free-form allergen names for each user
-CREATE TABLE IF NOT EXISTS public.user_allergens (
-  user_id UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  PRIMARY KEY (user_id, name)
-);
-
--- User preferences: stores free-form likes/dislikes for each user.
--- The name column is not foreign-keyed so that users can define
--- arbitrary preferences. The preference_type specifies whether the
--- entry is liked or disliked.
-CREATE TABLE IF NOT EXISTS public.user_preferences (
-  user_id UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
-  name TEXT NOT NULL,
-  preference_type VARCHAR(10) NOT NULL CHECK (preference_type IN ('like', 'dislike')),
-  PRIMARY KEY (user_id, name)
-);
-
--- Recipes table stores generated recipes for auditing and history.
-CREATE TABLE IF NOT EXISTS public.recipes (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  user_id UUID NOT NULL REFERENCES auth.users (id) ON DELETE CASCADE,
-  title TEXT NOT NULL,
-  meal_type_id INTEGER REFERENCES public.meal_types (id),
-  ingredients JSONB NOT NULL,
-  steps JSONB NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Seed data for diet types
-INSERT INTO public.diet_types (name)
-VALUES
-  ('omnivore'),
-  ('pescatarian'),
-  ('vegetarian'),
-  ('vegan')
-ON CONFLICT (name) DO NOTHING;
-
--- Seed data for meal types
-INSERT INTO public.meal_types (name)
-VALUES
-  ('breakfast'),
-  ('lunch'),
-  ('dinner'),
-  ('snack')
-ON CONFLICT (name) DO NOTHING;
-
--- Seed data for measurement types
-INSERT INTO public.measurement_types (name)
-VALUES
-  ('grams'),
-  ('milliliters'),
-  ('pieces'),
-  ('tablespoons'),
-  ('teaspoons'),
-  ('cups')
-ON CONFLICT (name) DO NOTHING;
-
--- ---------------------------------------------------------------------
--- Recipe templates for retrieval-augmented generation (RAG)
--- This table stores curated recipe examples along with a vector
--- representation of each recipe (embedding). The embedding can be
--- generated offline using a text-embedding model and inserted via
--- API/migration. The dimension (e.g. 1536) must match your embedding
--- model. Make sure the pgvector extension is enabled.
-
-CREATE EXTENSION IF NOT EXISTS vector;
-
+-- Master recipes table for RAG templates. It stores pre-built recipe
+-- templates which will be embedded and used for retrieval-augmented
+-- generation. `content` should contain the recipe text and `title` is
+-- the human-friendly name of the recipe.
 CREATE TABLE IF NOT EXISTS public.recipe_templates (
-  id SERIAL PRIMARY KEY,
+  id BIGSERIAL PRIMARY KEY,
   title TEXT NOT NULL,
   content TEXT NOT NULL,
-  embedding vector(1536) NOT NULL
+  embedding vector(1536) -- adjust dimension to match your embedding model
 );
 
--- Create an index for efficient approximate nearest-neighbour search on
--- the embeddings. Tune the `lists` parameter based on dataset size.
-CREATE INDEX IF NOT EXISTS recipe_templates_embedding_idx
-  ON public.recipe_templates
-  USING ivfflat (embedding vector_cosine_ops)
-  WITH (lists = 100);
+-- Profiles table keyed off the Supabase auth user id.  We use
+-- `user_id` instead of `id` to avoid confusion.  This table
+-- stores optional dietary preferences for each user.  Timestamps
+-- capture when the profile was created and last updated.
+CREATE TABLE IF NOT EXISTS public.profiles (
+  user_id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  diet_type_id INTEGER REFERENCES public.diet_types(id),
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
 
--- RPC function to retrieve the top N most similar recipe templates by
--- cosine similarity. Pass in the query embedding vector and the
--- desired number of matches. The similarity score is returned for
--- potential weighting in your prompt.
-CREATE OR REPLACE FUNCTION public.match_recipe_templates(
+-- Table to store recipes generated by the Genius page.  Each
+-- recipe belongs to a user, optionally references a meal type,
+-- and stores a title, list of ingredients and preparation steps
+-- in JSON format.  The created_at column records when the recipe
+-- was generated.
+CREATE TABLE IF NOT EXISTS public.recipes (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  meal_type_id INTEGER REFERENCES public.meal_types(id),
+  ingredients JSONB,
+  steps JSONB,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
+
+-- Add rating and feedback columns if they don't already exist.  A
+-- rating is stored as an integer between 1 and 5 inclusive. Feedback
+-- captures free‑form comments from the user about the recipe. Using
+-- ALTER TABLE with IF EXISTS ensures the statements succeed even
+-- when columns are already present.
+ALTER TABLE IF EXISTS public.recipes
+  ADD COLUMN IF NOT EXISTS rating INTEGER CHECK (rating >= 1 AND rating <= 5);
+
+ALTER TABLE IF EXISTS public.recipes
+  ADD COLUMN IF NOT EXISTS feedback TEXT;
+
+-- Add a column to store the diet type associated with a recipe.  This
+-- helps filter recipes by diet in the history page.  If a recipe is
+-- generated without a diet type, this column will be NULL.
+ALTER TABLE IF EXISTS public.recipes
+  ADD COLUMN IF NOT EXISTS diet_type_id INTEGER REFERENCES public.diet_types(id);
+
+-- Add a flag to mark recipes as favourite.  Users can toggle this
+-- property from the history page.  Defaults to FALSE.
+ALTER TABLE IF EXISTS public.recipes
+  ADD COLUMN IF NOT EXISTS favorite BOOLEAN DEFAULT FALSE;
+
+-- Fridge items per user. Each row represents an item in a user's
+-- fridge with quantity, measurement and expiration date.
+CREATE TABLE IF NOT EXISTS public.fridge_items (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  quantity NUMERIC NOT NULL,
+  measurement_type_id INTEGER REFERENCES public.measurement_types(id),
+  expiration_date DATE
+);
+
+-- Free-form allergens per user. Each record stores the allergen name
+-- as provided by the user. There is no master list; this table
+-- contains only user-specific strings.
+CREATE TABLE IF NOT EXISTS public.user_allergens (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL
+);
+
+-- Likes and dislikes. A single table with a type field to indicate
+-- preference: 'like' or 'dislike'. Again, no master list.
+CREATE TABLE IF NOT EXISTS public.user_preferences (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  preference_type TEXT NOT NULL CHECK (preference_type IN ('like','dislike'))
+);
+
+-- RPC function to find recipe templates similar to a provided
+-- embedding vector. This uses pgvector's cosine similarity to
+-- retrieve the top N matching templates.
+CREATE OR REPLACE FUNCTION public.match_recipe_templates (
   query_embedding vector,
-  match_count INTEGER
-)
-RETURNS TABLE (
-  id INTEGER,
+  match_count INTEGER DEFAULT 3
+) RETURNS TABLE (
+  id BIGINT,
   title TEXT,
   content TEXT,
   similarity DOUBLE PRECISION
-)
-LANGUAGE SQL STABLE
-AS $$
-  SELECT id, title, content,
-         1 - (embedding <=> query_embedding) AS similarity
-    FROM public.recipe_templates
-   ORDER BY embedding <=> query_embedding
+) LANGUAGE plpgsql AS $$
+BEGIN
+  RETURN QUERY
+  SELECT rt.id, rt.title, rt.content,
+         1 - (rt.embedding <=> query_embedding) AS similarity
+    FROM public.recipe_templates AS rt
+   ORDER BY rt.embedding <=> query_embedding
    LIMIT match_count;
+END;
 $$;
+
+-- Seed initial data for diet types, meal types and measurement types.
+INSERT INTO public.diet_types (name) VALUES ('omnivore'), ('pescatarian'), ('vegetarian'), ('vegan');
+
+INSERT INTO public.meal_types (name) VALUES ('breakfast'), ('lunch'), ('dinner'), ('snack');
+
+INSERT INTO public.measurement_types (name) VALUES ('grams'), ('liters'), ('pieces'), ('cups'), ('tablespoons');
+
+-- Additional measurement types to support more units such as kilograms,
+-- pounds and units for eggs or other countable items. Having these in
+-- the database allows the UI to stay flexible without hardcoding
+-- measurement names.
+INSERT INTO public.measurement_types (name) VALUES
+  ('kilograms'),
+  ('kg'),
+  ('pounds'),
+  ('lb'),
+  ('units'),
+  ('dozens'),
+  ('ml');
+
+-- Table to store weekly meal plans. Each plan belongs to a user and
+-- covers a week starting on a given date. The plan is stored as
+-- JSONB with an array of days and meals. Storing the plan in JSON
+-- allows flexible representation without a rigid schema.
+CREATE TABLE IF NOT EXISTS public.meal_plans (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  week_start_date DATE NOT NULL,
+  plan JSONB NOT NULL,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
+
+-- Shopping list: holds ingredients that the user needs to purchase. When
+-- suggest mode is enabled in the recipe or weekly planner, missing
+-- ingredients can be added to this table. Each row includes the
+-- ingredient name, aggregated quantity, and measurement type. The
+-- quantity is stored as a numeric value and measurement_type_id
+-- references the measurement_types table. The added_at timestamp
+-- tracks when the item was added. Duplicate entries for the same
+-- name and measurement_type_id should be aggregated by the
+-- application layer.
+CREATE TABLE IF NOT EXISTS public.shopping_list (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  quantity NUMERIC NOT NULL,
+  measurement_type_id INTEGER REFERENCES public.measurement_types(id),
+  added_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
+
+-- User personalization: stores the full personalization quiz answers
+-- as JSONB. One row per user. The application uses this to tailor
+-- recipe generation (portions, diet, cuisines, goals, etc.). When
+-- saving, the app may also sync diet_type_id to profiles and
+-- allergens/preferences to their tables for backward compatibility.
+CREATE TABLE IF NOT EXISTS public.user_personalization (
+  id BIGSERIAL PRIMARY KEY,
+  user_id UUID NOT NULL UNIQUE REFERENCES auth.users(id) ON DELETE CASCADE,
+  answers JSONB NOT NULL DEFAULT '{}',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now()),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc', now())
+);
+
+-- Seed some example recipe templates for retrieval‑augmented generation.
+-- These templates provide inspiration for the LLM and are stored in
+-- the database rather than code so that you can update them without
+-- redeploying. The embeddings will be computed at runtime when
+-- retrieving templates (embedding is left NULL here).
+INSERT INTO public.recipe_templates (title, content, embedding) VALUES
+  (
+    'Classic Margherita Pizza',
+    'Ingredients: Pizza dough, Tomato sauce, Fresh mozzarella cheese, Fresh basil leaves, Olive oil, Salt and pepper to taste.\nSteps: Preheat the oven to 475°F (245°C). Roll out the pizza dough and spread tomato sauce evenly. Top with slices of fresh mozzarella and fresh basil leaves. Drizzle with olive oil and season with salt and pepper. Bake in the preheated oven for 12–15 minutes or until the crust is golden brown.',
+    NULL
+  ),
+  (
+    'Vegetarian Stir‑Fry',
+    'Ingredients: Tofu, Broccoli florets, Carrots, Bell peppers, Soy sauce, Ginger, Garlic, Sesame oil, Cooked rice for serving.\nSteps: Heat sesame oil in a wok and sauté ginger and garlic until fragrant. Add tofu and stir‑fry until golden. Add broccoli, carrots and bell peppers and cook until tender‑crisp. Add soy sauce and toss to combine. Serve over cooked rice.',
+    NULL
+  ),
+  (
+    'Chicken Alfredo Pasta',
+    'Ingredients: Fettuccine pasta, Chicken breast, Heavy cream, Parmesan cheese, Garlic, Butter, Salt and pepper, Fresh parsley.\nSteps: Cook fettuccine according to package instructions. In a pan, sauté sliced chicken in butter until cooked through. Add minced garlic and cook until fragrant. Pour in heavy cream and grated Parmesan cheese; stir until the cheese melts. Season with salt and pepper. Combine the Alfredo sauce with cooked pasta and garnish with fresh parsley before serving.',
+    NULL
+  );
+
+-- Additional recipe templates to broaden the RAG knowledge base. These recipes
+-- provide more variety for the LLM to draw upon. The embedding is left
+-- NULL so it can be computed dynamically.
+INSERT INTO public.recipe_templates (title, content, embedding) VALUES
+  (
+    'Chocolate Chip Cookies',
+    'Ingredients: All‑purpose flour, Butter (softened), Brown sugar, White sugar, Eggs, Vanilla extract, Baking soda, Salt, Chocolate chips.\nSteps: Preheat the oven to 350°F (175°C). In a bowl, cream together softened butter, brown sugar, and white sugar. Beat in eggs one at a time, then stir in vanilla extract. Combine flour, baking soda, and salt. Gradually add to the wet ingredients. Fold in chocolate chips. Drop rounded tablespoons of dough onto ungreased baking sheets. Bake for 10–12 minutes or until edges are golden brown. Allow cookies to cool on the baking sheet for a few minutes before transferring to a wire rack.',
+    NULL
+  ),
+  (
+    'Mango Salsa Chicken',
+    'Ingredients: Chicken thighs, Mango (diced), Red onion (finely chopped), Cilantro (chopped), Lime juice, Jalapeño (minced), Salt and pepper to taste, Cooked rice for serving.\nSteps: Season chicken thighs with salt and pepper. Grill or bake chicken until fully cooked. In a bowl, combine diced mango, chopped red onion, cilantro, minced jalapeño, and lime juice. Dice the cooked chicken and mix it with the mango salsa. Serve over cooked rice.',
+    NULL
+  )
+;

@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
+import { useSupabase, useUser } from './SupabaseProvider';
 
 /**
  * A responsive navigation bar that appears on all pages. The left side
@@ -15,13 +15,15 @@ import { useUser, useSupabaseClient } from '@supabase/auth-helpers-react';
 export default function NavBar() {
   const pathname = usePathname();
   const router = useRouter();
-  const supabase = useSupabaseClient();
+  const { supabase } = useSupabase();
   const user = useUser();
   const [open, setOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    router.refresh();
+    // After signing out, refresh the page so that server components
+    // reflect the logged-out state. Redirect to login page.
+    router.replace('/login');
   };
 
   return (
@@ -66,7 +68,7 @@ export default function NavBar() {
                 strokeLinecap="round"
                 strokeLinejoin="round"
                 strokeWidth={2}
-                d={open ? 'M19 9l-7 7-7-7' : 'M19 9l-7 7-7-7'}
+                d={open ? 'M19 9l-7 7-7-7' : 'M19 15l-7-7-7 7'}
               />
             </svg>
           </button>

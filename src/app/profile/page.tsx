@@ -1,338 +1,379 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useSupabaseClient, useUser } from '@supabase/auth-helpers-react';
-import type { Database } from '../../lib/types';
+import { useState, useEffect } from 'react';
+import { useSupabase, useUser } from '../../components/SupabaseProvider';
 
-type TabName = 'general' | 'allergens' | 'likes';
+interface DietType {
+  id: number;
+  name: string;
+}
+interface Allergen {
+  id: number;
+  name: string;
+}
+interface Preference {
+  id: number;
+  name: string;
+  preference_type: 'like' | 'dislike';
+}
 
+/**
+ * Profile page for managing account details, allergens and preferences.
+ * It consists of three tabs: General, Allergens and Preferences. Users
+ * can update their email and password, select a diet type, manage
+ * allergens, and add or remove likes and dislikes. All updates are
+ * persisted via the Supabase client.
+ */
 export default function ProfilePage() {
-  const supabase = useSupabaseClient<Database>();
+  const { supabase } = useSupabase();
   const user = useUser();
-  const [tab, setTab] = useState<TabName>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'allergens' | 'preferences'>(
+    'general'
+  );
+  const [dietTypes, setDietTypes] = useState<DietType[]>([]);
+  const [selectedDietId, setSelectedDietId] = useState<number | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
-  const [isEditingPassword, setIsEditingPassword] = useState(false);
-  const [dietTypes, setDietTypes] = useState<Database['public']['Tables']['diet_types']['Row'][]>([]);
-  const [selectedDiet, setSelectedDiet] = useState<number | null>(null);
-  const [allergens, setAllergens] = useState<string[]>([]);
-  const [allergenInput, setAllergenInput] = useState('');
-  const [likes, setLikes] = useState<{ name: string; type: 'like' | 'dislike' }[]>([]);
-  const [likeInput, setLikeInput] = useState('');
-  const [likeType, setLikeType] = useState<'like' | 'dislike'>('like');
+  const [allergens, setAllergens] = useState<Allergen[]>([]);
+  const [newAllergen, setNewAllergen] = useState('');
+  const [preferences, setPreferences] = useState<Preference[]>([]);
+  const [newPrefName, setNewPrefName] = useState('');
+  const [newPrefType, setNewPrefType] = useState<'like' | 'dislike'>('like');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [message, setMessage] = useState<string | null>(null);
 
+  // Load initial data
   useEffect(() => {
     if (!user) return;
-    // Initialize email and fetch profile/diet
-    setEmail(user.email || '');
     const load = async () => {
-      // diet types
-      const { data: dTypes } = await supabase.from('diet_types').select('*').order('id');
-      if (dTypes) setDietTypes(dTypes);
-      // profile
-      const { data: profile } = await supabase
+      // Load email from auth user
+      setEmail(user.email ?? '');
+      // Load diet types
+      const { data: dtData, error: dtError } = await supabase
+        .from('diet_types')
+        .select('*')
+        .order('id');
+      if (dtError) {
+        console.error(dtError);
+      } else {
+        setDietTypes(dtData || []);
+      }
+      // Load profile to get selected diet id.  Cast to avoid `never`.
+      const { data: profileData } = await supabase
         .from('profiles')
         .select('diet_type_id')
         .eq('user_id', user.id)
-        .single();
-      if (profile?.diet_type_id) setSelectedDiet(profile.diet_type_id);
-      // allergens: fetch free-form names directly
+        .maybeSingle();
+      const profile = profileData as { diet_type_id?: number } | null;
+      if (profile?.diet_type_id) {
+        setSelectedDietId(profile.diet_type_id);
+      }
+      // Load allergens
       const { data: allergenRows } = await supabase
         .from('user_allergens')
-        .select('name')
+        .select('id,name')
         .eq('user_id', user.id);
-      if (allergenRows) {
-        setAllergens(allergenRows.map((row) => row.name));
-      }
-      // likes/dislikes: fetch free-form names and types
+      setAllergens((allergenRows as any[]) || []);
+      // Load preferences
       const { data: prefRows } = await supabase
         .from('user_preferences')
-        .select('name, preference_type')
+        .select('id,name,preference_type')
         .eq('user_id', user.id);
-      if (prefRows) {
-        const list: { name: string; type: 'like' | 'dislike' }[] = prefRows.map((p) => ({
-          name: p.name,
-          type: p.preference_type as 'like' | 'dislike'
-        }));
-        setLikes(list);
-      }
+      setPreferences((prefRows as any[]) || []);
     };
     load();
   }, [supabase, user]);
 
-  const saveGeneral = async () => {
+  // General update handler (email, password, diet)
+  async function handleSaveGeneral() {
     if (!user) return;
     setLoading(true);
-    setError(null);
+    setMessage(null);
     try {
-      // Update email/password via supabase auth
-      if (isEditingEmail || isEditingPassword) {
-        const updatePayload: { email?: string; password?: string } = {};
-        if (isEditingEmail) updatePayload.email = email;
-        if (isEditingPassword) updatePayload.password = password;
-        const { error: authError } = await supabase.auth.updateUser(updatePayload);
+      // Update email/password via auth API
+      const updates: { email?: string; password?: string } = {};
+      if (email && email !== user.email) updates.email = email;
+      if (password) updates.password = password;
+      if (Object.keys(updates).length > 0) {
+        const { error: authError } = await supabase.auth.updateUser(updates);
         if (authError) throw authError;
       }
-      // Update diet type
-      await supabase
-        .from('profiles')
-        .upsert({ user_id: user.id, diet_type_id: selectedDiet }, { onConflict: 'user_id' });
-      setIsEditingEmail(false);
-      setIsEditingPassword(false);
+      // Update diet
+      if (selectedDietId) {
+        await supabase
+          .from('profiles')
+          .upsert({ user_id: user.id, diet_type_id: selectedDietId });
+      }
       setPassword('');
+      setMessage('Profile updated');
     } catch (err: any) {
-      setError(err.message || 'Failed to update profile');
-    }
-    setLoading(false);
-  };
-
-  const addAllergen = async () => {
-    if (!user || !allergenInput.trim()) return;
-    setLoading(true);
-    setError(null);
-    const name = allergenInput.trim();
-    try {
-      await supabase.from('user_allergens').insert({ user_id: user.id, name });
-      setAllergens((prev) => [...prev, name]);
-      setAllergenInput('');
-    } catch (error: any) {
-      setError(error.message);
+      setMessage(err.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const deleteAllergen = async (name: string) => {
-    if (!user) return;
-    await supabase
-      .from('user_allergens')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('name', name);
-    setAllergens((prev) => prev.filter((a) => a !== name));
-  };
-
-  const addPreference = async () => {
-    if (!user || !likeInput.trim()) return;
+  // Add allergen
+  async function handleAddAllergen() {
+    if (!user || !newAllergen.trim()) return;
     setLoading(true);
-    setError(null);
-    const name = likeInput.trim();
     try {
-      // Upsert by (user_id, name) to either insert a new preference or update the type
-      await supabase
+      const { data, error } = await supabase
+        .from('user_allergens')
+        .insert({ user_id: user.id, name: newAllergen.trim() })
+        .select('id,name');
+      if (error) throw error;
+      if (data) {
+        setAllergens([...allergens, data[0] as Allergen]);
+        setNewAllergen('');
+      }
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to add allergen');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Delete allergen
+  async function handleDeleteAllergen(id: number) {
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('user_allergens').delete().eq('id', id);
+      if (error) throw error;
+      setAllergens(allergens.filter((a) => a.id !== id));
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to delete allergen');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Add preference
+  async function handleAddPreference() {
+    if (!user || !newPrefName.trim()) return;
+    setLoading(true);
+    try {
+      const { data, error } = await supabase
         .from('user_preferences')
-        .upsert(
-          { user_id: user.id, name, preference_type: likeType },
-          { onConflict: 'user_id,name' }
-        );
-      // Update local state: remove any existing entry for this name and add the new one
-      setLikes((prev) => {
-        const others = prev.filter((p) => p.name !== name);
-        return [...others, { name, type: likeType }];
-      });
-      setLikeInput('');
-    } catch (error: any) {
-      setError(error.message);
+        .insert({
+          user_id: user.id,
+          name: newPrefName.trim(),
+          preference_type: newPrefType
+        })
+        .select('id,name,preference_type');
+      if (error) throw error;
+      if (data) {
+        setPreferences([...preferences, data[0] as Preference]);
+        setNewPrefName('');
+        setNewPrefType('like');
+      }
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to add preference');
     } finally {
       setLoading(false);
     }
-  };
+  }
 
-  const deletePreference = async (name: string) => {
-    if (!user) return;
-    await supabase
-      .from('user_preferences')
-      .delete()
-      .eq('user_id', user.id)
-      .eq('name', name);
-    setLikes((prev) => prev.filter((p) => p.name !== name));
-  };
+  // Delete preference
+  async function handleDeletePreference(id: number) {
+    setLoading(true);
+    try {
+      const { error } = await supabase.from('user_preferences').delete().eq('id', id);
+      if (error) throw error;
+      setPreferences(preferences.filter((p) => p.id !== id));
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to delete preference');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // Toggle preference type
+  async function handleTogglePreference(pref: Preference) {
+    setLoading(true);
+    try {
+      const newType: 'like' | 'dislike' = pref.preference_type === 'like' ? 'dislike' : 'like';
+      // Cast the update payload to `any` to avoid TS inferring `never`.
+      const { error } = await supabase
+        .from('user_preferences')
+        .update({ preference_type: newType } as any)
+        .eq('id', pref.id);
+      if (error) throw error;
+      setPreferences(
+        preferences.map((p) => (p.id === pref.id ? { ...p, preference_type: newType } : p))
+      );
+    } catch (err: any) {
+      setMessage(err.message || 'Failed to update preference');
+    } finally {
+      setLoading(false);
+    }
+  }
 
   return (
-    <div>
-      {!user ? (
-        <p className="mt-4">
-          Please{' '}
-          <a href="/login" className="text-blue-600 underline">
-            log in
-          </a>{' '}
-          to view and edit your profile.
-        </p>
-      ) : (
-        <>
-          <h1 className="text-xl font-semibold mb-4">Profile</h1>
-          {error && <p className="text-red-600 mb-2">{error}</p>}
-          <div className="flex space-x-4 border-b mb-4">
-            <button
-              className={`pb-2 ${tab === 'general' ? 'border-b-2 border-blue-600 font-medium' : ''}`}
-              onClick={() => setTab('general')}
+    <div className="mt-8" style={{ maxWidth: '600px' }}>
+      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
+        Profile
+      </h1>
+      <div className="tab-row">
+        <button
+          onClick={() => setActiveTab('general')}
+          className={activeTab === 'general' ? 'active' : ''}
+        >
+          General
+        </button>
+        <button
+          onClick={() => setActiveTab('allergens')}
+          className={activeTab === 'allergens' ? 'active' : ''}
+        >
+          Allergens
+        </button>
+        <button
+          onClick={() => setActiveTab('preferences')}
+          className={activeTab === 'preferences' ? 'active' : ''}
+        >
+          Likes & Dislikes
+        </button>
+      </div>
+      {message && (
+        <p style={{ color: 'var(--success-color)', marginBottom: '1rem' }}>{message}</p>
+      )}
+      {activeTab === 'general' && (
+        <div className="space-y-4">
+          <div className="flex flex-col">
+            <label className="mb-1">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="mb-1">New password</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+            />
+          </div>
+          <div className="flex flex-col">
+            <label className="mb-1">Diet</label>
+            <select
+              value={selectedDietId ?? ''}
+              onChange={(e) => setSelectedDietId(e.target.value ? parseInt(e.target.value) : null)}
             >
-              General
-            </button>
+              <option value="">None</option>
+              {dietTypes.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button onClick={handleSaveGeneral} disabled={loading} className="btn">
+            Save
+          </button>
+        </div>
+      )}
+      {activeTab === 'allergens' && (
+        <div className="space-y-4">
+          <div className="flex gap-2 items-end">
+            <div className="flex flex-col" style={{ flex: 1 }}>
+              <label className="mb-1">Add allergen</label>
+              <input
+                type="text"
+                value={newAllergen}
+                onChange={(e) => setNewAllergen(e.target.value)}
+              />
+            </div>
             <button
-              className={`pb-2 ${tab === 'allergens' ? 'border-b-2 border-blue-600 font-medium' : ''}`}
-              onClick={() => setTab('allergens')}
+              onClick={handleAddAllergen}
+              disabled={loading || !newAllergen.trim()}
+              className="btn"
             >
-              Allergens
-            </button>
-            <button
-              className={`pb-2 ${tab === 'likes' ? 'border-b-2 border-blue-600 font-medium' : ''}`}
-              onClick={() => setTab('likes')}
-            >
-              Likes/Dislikes
+              Add
             </button>
           </div>
-          {tab === 'general' && (
-            <div className="space-y-4">
-              <div>
-                <label className="block font-medium mb-1">Email</label>
-                <div className="flex space-x-2 items-center">
-                  <input
-                    className="border rounded px-2 py-1 flex-1"
-                    type="email"
-                    value={email}
-                    readOnly={!isEditingEmail}
-                    onChange={(e) => setEmail(e.target.value)}
-                  />
-                  <button
-                    className="text-blue-600 hover:underline"
-                    onClick={() => setIsEditingEmail(!isEditingEmail)}
-                  >
-                    {isEditingEmail ? 'Cancel' : 'Change'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">Password</label>
-                <div className="flex space-x-2 items-center">
-                  <input
-                    className="border rounded px-2 py-1 flex-1"
-                    type="password"
-                    placeholder="••••••••"
-                    value={password}
-                    readOnly={!isEditingPassword}
-                    onChange={(e) => setPassword(e.target.value)}
-                  />
-                  <button
-                    className="text-blue-600 hover:underline"
-                    onClick={() => setIsEditingPassword(!isEditingPassword)}
-                  >
-                    {isEditingPassword ? 'Cancel' : 'Change'}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="block font-medium mb-1">Diet type</label>
-                <select
-                  className="border rounded px-2 py-1"
-                  value={selectedDiet ?? ''}
-                  onChange={(e) => setSelectedDiet(parseInt(e.target.value))}
-                >
-                  <option value="">None</option>
-                  {dietTypes.map((dt) => (
-                    <option key={dt.id} value={dt.id}>
-                      {dt.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <button
-                onClick={saveGeneral}
-                className="bg-blue-600 text-white px-4 py-2 rounded mt-2"
-                disabled={loading}
+          <ul className="space-y-2">
+            {allergens.map((a) => (
+              <li
+                key={a.id}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}
               >
-                Save
-              </button>
-            </div>
-          )}
-          {tab === 'allergens' && (
-            <div className="space-y-4">
-              <div className="flex space-x-2">
-                <input
-                  type="text"
-                  className="border rounded px-2 py-1 flex-1"
-                  placeholder="Add new allergen"
-                  value={allergenInput}
-                  onChange={(e) => setAllergenInput(e.target.value)}
-                />
+                <span>{a.name}</span>
                 <button
-                  onClick={addAllergen}
-                  className="bg-blue-600 text-white px-3 py-1 rounded"
+                  onClick={() => handleDeleteAllergen(a.id)}
                   disabled={loading}
+                  style={{ color: 'var(--error-color)', background: 'none', border: 'none' }}
                 >
-                  Add
+                  ✕
                 </button>
-              </div>
-              <ul className="space-y-1">
-                {allergens.map((all) => (
-                  <li key={all} className="flex justify-between items-center border px-2 py-1 rounded">
-                    <span>{all}</span>
-                    <button
-                      onClick={() => deleteAllergen(all)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-                {allergens.length === 0 && <li className="text-gray-500">No allergens specified.</li>}
-              </ul>
+              </li>
+            ))}
+            {allergens.length === 0 && (
+              <li style={{ color: 'var(--muted-text-color)' }}>No allergens set.</li>
+            )}
+          </ul>
+        </div>
+      )}
+      {activeTab === 'preferences' && (
+        <div className="space-y-4">
+          <div className="flex gap-2 items-end">
+            <div className="flex flex-col" style={{ flex: 1 }}>
+              <label className="mb-1">Add like/dislike</label>
+              <input
+                type="text"
+                value={newPrefName}
+                onChange={(e) => setNewPrefName(e.target.value)}
+              />
             </div>
-          )}
-          {tab === 'likes' && (
-            <div className="space-y-4">
-              <div className="flex space-x-2 items-center">
-                <input
-                  type="text"
-                  className="border rounded px-2 py-1 flex-1"
-                  placeholder="Add new like/dislike"
-                  value={likeInput}
-                  onChange={(e) => setLikeInput(e.target.value)}
-                />
-                <select
-                  value={likeType}
-                  onChange={(e) => setLikeType(e.target.value as 'like' | 'dislike')}
-                  className="border rounded px-2 py-1"
-                >
-                  <option value="like">Like</option>
-                  <option value="dislike">Dislike</option>
-                </select>
-                <button
-                  onClick={addPreference}
-                  className="bg-blue-600 text-white px-3 py-1 rounded"
-                  disabled={loading}
-                >
-                  Add
-                </button>
-              </div>
-              <ul className="space-y-1">
-                {likes.map((p) => (
-                  <li
-                    key={p.name}
-                    className="flex justify-between items-center border px-2 py-1 rounded"
+            <select
+              value={newPrefType}
+              onChange={(e) => setNewPrefType(e.target.value as 'like' | 'dislike')}
+            >
+              <option value="like">Like</option>
+              <option value="dislike">Dislike</option>
+            </select>
+            <button
+              onClick={handleAddPreference}
+              disabled={loading || !newPrefName.trim()}
+              className="btn"
+            >
+              Add
+            </button>
+          </div>
+          <ul className="space-y-2">
+            {preferences.map((p) => (
+              <li
+                key={p.id}
+                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}
+              >
+                <span>
+                  {p.name} ({p.preference_type})
+                </span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleTogglePreference(p)}
+                    disabled={loading}
+                    style={{ color: 'var(--accent-color)', background: 'none', border: 'none' }}
                   >
-                    <span>
-                      {p.name} –{' '}
-                      <span className={p.type === 'like' ? 'text-green-600' : 'text-red-600'}>
-                        {p.type}
-                      </span>
-                    </span>
-                    <button
-                      onClick={() => deletePreference(p.name)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      ✕
-                    </button>
-                  </li>
-                ))}
-                {likes.length === 0 && <li className="text-gray-500">No likes or dislikes.</li>}
-              </ul>
-            </div>
-          )}
-        </>
+                    Toggle
+                  </button>
+                  <button
+                    onClick={() => handleDeletePreference(p.id)}
+                    disabled={loading}
+                    style={{ color: 'var(--error-color)', background: 'none', border: 'none' }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </li>
+            ))}
+            {preferences.length === 0 && (
+              <li style={{ color: 'var(--muted-text-color)' }}>No preferences set.</li>
+            )}
+          </ul>
+        </div>
       )}
     </div>
   );

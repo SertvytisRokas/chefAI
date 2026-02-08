@@ -10,6 +10,7 @@ erDiagram
         UUID user_id PK
         INT diet_type_id FK
         TIMESTAMP created_at
+        TIMESTAMP updated_at
     }
     DIET_TYPES {
         INT id PK
@@ -24,22 +25,22 @@ erDiagram
         VARCHAR name
     }
     FRIDGE_ITEMS {
-        UUID id PK
+        BIGSERIAL id PK
         UUID user_id FK
         TEXT name
         NUMERIC quantity
         INT measurement_type_id FK
         DATE expiration_date
-        TIMESTAMP created_at
-        TIMESTAMP updated_at
     }
     USER_ALLERGENS {
-        UUID user_id PK FK
-        TEXT name PK
+        BIGSERIAL id PK
+        UUID user_id FK
+        TEXT name
     }
     USER_PREFERENCES {
-        UUID user_id PK FK
-        TEXT name PK
+        BIGSERIAL id PK
+        UUID user_id FK
+        TEXT name
         VARCHAR preference_type
     }
     RECIPE_TEMPLATES {
@@ -49,7 +50,7 @@ erDiagram
         VECTOR embedding
     }
     RECIPES {
-        UUID id PK
+        BIGSERIAL id PK
         UUID user_id FK
         TEXT title
         INT meal_type_id FK

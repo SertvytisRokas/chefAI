@@ -1,25 +1,37 @@
 import './globals.css';
-import { ReactNode } from 'react';
-import NavBar from '../components/NavBar';
-import { createBrowserSupabaseClient } from '@supabase/auth-helpers-nextjs';
-import { SessionContextProvider } from '@supabase/auth-helpers-react';
-import { Database } from '../lib/types';
+import SupabaseProvider from '../components/SupabaseProvider';
+import TopBar from '../components/TopBar';
+import SideNav from '../components/SideNav';
+import type { ReactNode } from 'react';
+
+export const metadata = {
+  title: 'Meal Genius',
+  description: 'Reduce food waste by creating meals from your fridge contents'
+};
 
 /**
- * Root layout for the application. It wraps the page in a Supabase
- * context provider so that client components can access the user and
- * perform database operations. It also renders a persistent NavBar on
- * every page.
+ * The root layout wraps all pages with the Supabase provider and
+ * navigation bar. Using the App Router, this component applies to
+ * every route in the application. We render children inside a
+ * centralised container for consistent spacing.
  */
-export default function RootLayout({ children }: { children: ReactNode }) {
-  const supabaseClient = createBrowserSupabaseClient<Database>();
+export default function RootLayout({
+  children
+}: {
+  children: ReactNode;
+}) {
   return (
     <html lang="en">
-      <body className="bg-white text-gray-900">
-        <SessionContextProvider supabaseClient={supabaseClient} initialSession={null}>
-          <NavBar />
-          <main className="p-4 max-w-4xl mx-auto">{children}</main>
-        </SessionContextProvider>
+      <body>
+        <SupabaseProvider>
+          <div className="app">
+            <TopBar />
+            <div className="app-body">
+              <SideNav />
+              <main className="page">{children}</main>
+            </div>
+          </div>
+        </SupabaseProvider>
       </body>
     </html>
   );

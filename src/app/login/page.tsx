@@ -1,76 +1,97 @@
 "use client";
 
 import { useState } from 'react';
-import { useSupabaseClient } from '@supabase/auth-helpers-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { supabaseBrowser } from '../../lib/supabase/client';
 
+/**
+ * Login and sign up page. Users can either create a new account or
+ * authenticate with an existing one. After successful authentication
+ * they are redirected to the page specified by the `redirect` query
+ * parameter or to the fridge by default.
+ */
 export default function LoginPage() {
-  const supabase = useSupabaseClient();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectPath = searchParams.get('redirect') || '/fridge';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [mode, setMode] = useState<'login' | 'signup'>('login');
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async () => {
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
     setLoading(true);
-    setError(null);
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-    if (signInError) {
-      setError(signInError.message);
-    } else {
-      router.push('/fridge');
+    const supabase = supabaseBrowser();
+    try {
+      if (mode === 'login') {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+        if (error) throw error;
+        if (data.session) {
+          router.replace(redirectPath);
+        }
+      } else {
+        const { data, error } = await supabase.auth.signUp({
+          email,
+          password
+        });
+        if (error) throw error;
+        // After sign up, automatically log in and redirect
+        if (data.session) {
+          router.replace('/profile');
+        } else {
+          // If no session, email confirmation may be required
+          alert('Check your email for a confirmation link.');
+        }
+      }
+    } catch (err: any) {
+      alert(err.message || 'An unexpected error occurred');
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
-
-  const handleSignup = async () => {
-    setLoading(true);
-    setError(null);
-    const { error: signUpError } = await supabase.auth.signUp({ email, password });
-    if (signUpError) {
-      setError(signUpError.message);
-    } else {
-      // After sign-up, redirect to fridge so the user can start adding items
-      router.push('/fridge');
-    }
-    setLoading(false);
-  };
+  }
 
   return (
-    <div className="max-w-sm mx-auto mt-16 bg-white p-6 rounded shadow">
-      <h1 className="text-xl font-semibold mb-4">Login or Sign Up</h1>
-      {error && <p className="text-red-600 mb-2">{error}</p>}
-      <div className="space-y-4">
-        <input
-          type="email"
-          className="w-full border rounded px-3 py-2"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          type="password"
-          className="w-full border rounded px-3 py-2"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
-        <button
-          onClick={handleLogin}
-          className="w-full bg-blue-600 text-white py-2 rounded"
-          disabled={loading}
-        >
-          {loading ? 'Loading...' : 'Login'}
+    <div className="auth-container">
+      <h1>{mode === 'login' ? 'Sign In' : 'Create Account'}</h1>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div>
+          <label htmlFor="email" className="mb-1">Email</label>
+          <input
+            id="email"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="password" className="mb-1">Password</label>
+          <input
+            id="password"
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+        </div>
+        <button type="submit" disabled={loading} className="btn w-full">
+          {loading ? 'Submitting…' : mode === 'login' ? 'Sign In' : 'Sign Up'}
         </button>
+      </form>
+      <p className="mt-4" style={{ textAlign: 'center', fontSize: '0.85rem' }}>
+        {mode === 'login' ? 'Need an account?' : 'Already have an account?'}{' '}
         <button
-          onClick={handleSignup}
-          className="w-full bg-gray-200 text-gray-800 py-2 rounded"
-          disabled={loading}
+          type="button"
+          className="switch-link"
+          onClick={() => setMode(mode === 'login' ? 'signup' : 'login')}
         >
-          {loading ? 'Loading...' : 'Sign Up'}
+          {mode === 'login' ? 'Create one' : 'Sign in'}
         </button>
-      </div>
+      </p>
     </div>
   );
 }
