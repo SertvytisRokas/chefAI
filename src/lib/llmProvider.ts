@@ -157,22 +157,12 @@ export async function generateRecipe(
   const data = await resp.json();
   // For Ollama, the response field contains the raw response string
   const raw = data.response ?? data.choices?.[0]?.message?.content ?? '';
-  // Logging for debugging: show the prompt and raw response. These logs
-  // will be visible in the server console when running `pnpm dev` and
-  // can help diagnose parsing errors.
-  // eslint-disable-next-line no-console
-  console.log('LLM prompt:', prompt);
-  // eslint-disable-next-line no-console
-  console.log('LLM raw response:', raw);
-  // Extract JSON from the response (the model may include surrounding text)
   const jsonStart = raw.indexOf('{');
   const jsonEnd = raw.lastIndexOf('}');
   if (jsonStart === -1 || jsonEnd === -1) {
     throw new Error('Failed to parse JSON recipe from LLM response');
   }
   let jsonString = raw.slice(jsonStart, jsonEnd + 1);
-  // eslint-disable-next-line no-console
-  console.log('Extracted JSON string:', jsonString);
   // Remove trailing commas before a closing bracket/brace to avoid
   // common JSON syntax errors. This regex replaces a comma followed
   // by optional whitespace and a closing bracket/brace with just the
@@ -182,12 +172,6 @@ export async function generateRecipe(
     const recipe: RecipeResult = JSON.parse(cleanedJsonString);
     return recipe;
   } catch (err: any) {
-    // eslint-disable-next-line no-console
-    console.error('Error parsing JSON from LLM response:', err);
-    // eslint-disable-next-line no-console
-    console.error('Original JSON string:', jsonString);
-    // eslint-disable-next-line no-console
-    console.error('Cleaned JSON string:', cleanedJsonString);
     throw new Error(`Failed to parse JSON recipe: ${err.message}`);
   }
 }
@@ -303,32 +287,17 @@ export async function generateWeeklyPlan(
   }
   const data = await resp.json();
   const raw = data.response ?? data.choices?.[0]?.message?.content ?? '';
-  // Debug logging
-  // eslint-disable-next-line no-console
-  console.log('Weekly plan prompt:', prompt);
-  // eslint-disable-next-line no-console
-  console.log('Weekly plan raw response:', raw);
   const jsonStart = raw.indexOf('{');
   const jsonEnd = raw.lastIndexOf('}');
   if (jsonStart === -1 || jsonEnd === -1) {
     throw new Error('Failed to parse JSON weekly plan from LLM response');
   }
   let jsonString = raw.slice(jsonStart, jsonEnd + 1);
-  // eslint-disable-next-line no-console
-  console.log('Extracted weekly plan JSON:', jsonString);
-  // Remove trailing commas before a closing bracket/brace to avoid
-  // common JSON syntax errors.
   const cleanedJsonString = jsonString.replace(/,\s*([}\]])/g, '$1');
   try {
     const plan: WeeklyPlan = JSON.parse(cleanedJsonString);
     return plan;
   } catch (err: any) {
-    // eslint-disable-next-line no-console
-    console.error('Error parsing weekly plan JSON:', err);
-    // eslint-disable-next-line no-console
-    console.error('Original JSON string:', jsonString);
-    // eslint-disable-next-line no-console
-    console.error('Cleaned JSON string:', cleanedJsonString);
     throw new Error(`Failed to parse weekly plan: ${err.message}`);
   }
 }

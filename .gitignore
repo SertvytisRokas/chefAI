@@ -39,3 +39,9 @@ coverage/
 
 # Misc
 *.pem
+
+# Internal / local-only (do not push; keep for your reference)
+CLEANUP-SUGGESTIONS.md
+*-SUGGESTIONS.md
+*-INSTRUCTIONS.md
+.local/
