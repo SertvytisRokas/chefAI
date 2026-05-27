@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSupabase, useUser } from '../../components/SupabaseProvider';
-import { generateRecipe, type RecipeResult } from '../../lib/llmProvider';
+import type { RecipeResult } from '../../lib/llmTypes';
 import { preferencesFromPersonalization } from '../../lib/personalization';
 import type { PersonalizationAnswers } from '../../lib/personalization';
 
@@ -14,8 +14,8 @@ interface Option {
 /**
  * The Genius page allows users to generate recipes from their fridge
  * contents. It lets the user select a meal type and number of
- * portions, then calls a local LLM via the `/api/generate` route or
- * directly via the client to produce a recipe. Results are shown
+ * portions, then calls `/api/generate` (OpenRouter + RAG on the server).
+ * Results are shown
  * below the form.
  */
 export default function GeniusPage() {
@@ -264,11 +264,25 @@ export default function GeniusPage() {
         prefsObj = { diet: dietName, allergens, likes, dislikes };
       }
       const mealName = mealTypes.find((m) => m.id === selectedMealType)?.name;
-      result = await generateRecipe(fridgePayload, prefsObj, {
-        mealType: mealName,
-        portions,
-        suggestMode
-      }, personalization);
+      const genRes = await fetch('/api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fridge: fridgePayload,
+          preferences: prefsObj,
+          options: { mealType: mealName, portions, suggestMode },
+          personalization
+        })
+      });
+      const genData = await genRes.json();
+      if (!genRes.ok) {
+        throw new Error(genData.error || 'Failed to generate recipe');
+      }
+      result = genData.recipe as RecipeResult;
+      if (genData.id != null) {
+        savedRecipeId = genData.id as number;
+        setRecipeId(savedRecipeId);
+      }
       setRecipe(result);
       // Record whether this recipe was generated in suggest mode
       setCurrentSuggest(suggestMode);
@@ -352,7 +366,7 @@ export default function GeniusPage() {
       // same title already exists for this user.  If it exists we
       // reuse its ID instead of inserting a new row.  We also
       // persist the diet_type_id to enable filtering in history.
-      if (user) {
+      if (user && savedRecipeId == null) {
         // Find existing recipe (case-insensitive match on title)
         const { data: existingRec } = await supabase
           .from('recipes')

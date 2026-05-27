@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useSupabase, useUser } from '../../components/SupabaseProvider';
-import { generateWeeklyPlan, WeeklyPlan, generateRecipe } from '../../lib/llmProvider';
+import type { RecipeResult, WeeklyPlan } from '../../lib/llmTypes';
 import { preferencesFromPersonalization } from '../../lib/personalization';
 import type { PersonalizationAnswers } from '../../lib/personalization';
 import Modal from '../../components/Modal';
@@ -160,7 +160,21 @@ export default function WeeklyPlanPage() {
         }
         prefsObj = { diet: dietName, allergens, likes, dislikes };
       }
-      const result = await generateWeeklyPlan(fridgePayload, prefsObj, suggestMode, personalization);
+      const weeklyRes = await fetch('/api/generate-weekly', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fridge: fridgePayload,
+          preferences: prefsObj,
+          suggestMode,
+          personalization
+        })
+      });
+      const weeklyData = await weeklyRes.json();
+      if (!weeklyRes.ok) {
+        throw new Error(weeklyData.error || 'Failed to generate weekly plan');
+      }
+      const result = weeklyData.plan as WeeklyPlan;
       // For each meal in the weekly plan, insert a recipe row so
       // that feedback can be saved. We also attach the inserted
       // recipe ID to the meal.  Meals may be named differently to
@@ -458,11 +472,21 @@ export default function WeeklyPlanPage() {
       prefsObj = { diet: dietName, allergens, likes, dislikes };
     }
     const mTypeName = meal.mealType;
-    const result = await generateRecipe(fridgePayload, prefsObj, {
-      mealType: mTypeName,
-      portions: 1,
-      suggestMode
-    }, personalization);
+    const regenRes = await fetch('/api/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fridge: fridgePayload,
+        preferences: prefsObj,
+        options: { mealType: mTypeName, portions: 1, suggestMode },
+        personalization
+      })
+    });
+    const regenData = await regenRes.json();
+    if (!regenRes.ok) {
+      throw new Error(regenData.error || 'Failed to regenerate meal');
+    }
+    const result = regenData.recipe as RecipeResult;
     // Insert new recipe row or reuse existing; compute missing
     const mTypeRecord = mealTypes.find((m) => m.name.toLowerCase() === mTypeName.toLowerCase());
     let recipeId: number | null = null;
