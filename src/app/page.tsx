@@ -119,7 +119,7 @@ export default function HomePage() {
       {/* Problem & live counters */}
       <section
         id="the-problem"
-        className="landing-section landing-section-alt landing-screen landing-panel-section"
+        className="landing-section landing-section-alt landing-problem-section"
       >
         <div className="landing-container landing-panel-inner">
           <h2 className="landing-section-title">Food waste is a crisis we can fix</h2>

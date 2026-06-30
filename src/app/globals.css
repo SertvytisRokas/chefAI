@@ -519,6 +519,38 @@ main.landing-main {
   margin-right: auto;
 }
 
+/* Food waste section — compact, narrow */
+.landing-problem-section {
+  padding: 1.75rem 2rem 1.5rem;
+}
+
+.landing-problem-section .landing-panel-inner {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.landing-problem-section .landing-section-title {
+  margin-bottom: 0.4rem;
+}
+
+.landing-problem-section .landing-section-lead {
+  max-width: 620px;
+  margin-bottom: 0.85rem;
+}
+
+.landing-problem-section .landing-source-note {
+  margin-top: 0.65rem;
+  max-width: 620px;
+}
+
+.landing-problem-section .waste-counters {
+  gap: 0.65rem;
+}
+
+.landing-problem-section .waste-counter-card {
+  padding: 0.9rem 0.75rem;
+}
+
 /* Live waste counters (embedded in landing page) */
 .waste-counters {
   display: grid;
@@ -537,13 +569,13 @@ main.landing-main {
 
 .waste-counter-tier {
   display: inline-block;
-  font-size: 0.62rem;
+  font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  margin-bottom: 0.5rem;
+  margin: 0.35rem 0 0.4rem;
 }
 .waste-counter-tier--live {
   color: var(--accent-color);
@@ -559,18 +591,36 @@ main.landing-main {
 }
 
 .waste-counter-value {
+  display: block;
+  width: 100%;
+  background: none;
+  border: none;
+  padding: 0.15rem 0;
   font-size: clamp(1.25rem, 2.5vw, 1.65rem);
   font-weight: 700;
   color: var(--accent-color);
-  margin: 0 0 0.35rem;
+  margin: 0;
   font-variant-numeric: tabular-nums;
+  font-family: inherit;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+.waste-counter-value:hover {
+  color: var(--accent-hover);
+  background-color: rgba(61, 170, 114, 0.08);
+}
+.waste-counter-value:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
 }
 
 .waste-counter-label {
-  font-size: 0.85rem;
+  font-size: clamp(0.9rem, 1.6vw, 1rem);
   font-weight: 600;
-  margin: 0 0 0.25rem;
+  margin: 0 0 0.5rem;
   line-height: 1.3;
+  color: var(--text-color);
 }
 
 .waste-counter-sub {
@@ -592,7 +642,25 @@ main.landing-main {
   gap: 0.15rem;
 }
 
-.blog-carousel-row {
+.blog-carousel-window {
+  overflow: hidden;
+  min-width: 0;
+}
+
+.blog-carousel-track {
+  display: flex;
+  transition: transform 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .blog-carousel-track {
+    transition: none;
+  }
+}
+
+.blog-carousel-slide {
+  flex: 0 0 100%;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
@@ -693,49 +761,74 @@ main.landing-main {
   margin-top: 1rem;
 }
 
-/* Feature sell grid — 3×3 equal squares */
+/* Feature sell grid — compact 3×3 */
 .landing-features-section {
-  padding: 2.5rem 2rem;
+  padding: 1.75rem 2rem 1.5rem;
+}
+
+.landing-features-section .landing-section-title {
+  margin-bottom: 0.4rem;
 }
 
 .landing-features-section .landing-section-lead--compact {
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .features-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 0.65rem;
+  gap: 0.5rem;
+  max-width: 720px;
+  margin: 0 auto;
 }
 
 .feature-card {
-  aspect-ratio: 1;
-  background-color: var(--bg-color);
+  position: relative;
+  background: linear-gradient(160deg, var(--surface-hover) 0%, var(--bg-color) 100%);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  padding: 1rem;
+  border-radius: 6px;
+  padding: 0.65rem 0.55rem;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  background: var(--accent-color);
+  opacity: 0.4;
+  border-radius: 0 0 2px 2px;
+}
+
+.feature-card:hover {
+  border-color: rgba(61, 170, 114, 0.45);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
 }
 
 .feature-card h3 {
-  font-size: 0.88rem;
+  font-size: 0.78rem;
   font-weight: 600;
-  margin: 0 0 0.45rem;
+  margin: 0 0 0.3rem;
   color: var(--accent-color);
-  line-height: 1.3;
-  flex-shrink: 0;
+  line-height: 1.25;
+  text-align: center;
 }
 
 .feature-card p {
-  font-size: 0.78rem;
+  font-size: 0.68rem;
   color: var(--muted-text-color);
-  line-height: 1.5;
+  line-height: 1.4;
   margin: 0;
-  flex: 1;
-  overflow: hidden;
+  text-align: center;
 }
 
 /* CTA band */
@@ -831,7 +924,7 @@ main.landing-main {
   .blog-carousel-viewport {
     grid-template-columns: auto 1fr auto;
   }
-  .blog-carousel-row {
+  .blog-carousel-slide {
     grid-template-columns: 1fr;
   }
   .blog-card-image {
@@ -855,7 +948,9 @@ main.landing-main {
   }
   .landing-hero,
   .landing-panel-section,
-  .landing-articles-section {
+  .landing-articles-section,
+  .landing-problem-section,
+  .landing-features-section {
     padding: 1rem 1.25rem;
   }
   .landing-section {

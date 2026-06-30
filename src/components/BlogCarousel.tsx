@@ -40,15 +40,22 @@ function ChevronRight() {
   );
 }
 
+function chunkPosts(posts: BlogPost[], perPage: number): BlogPost[][] {
+  const pages: BlogPost[][] = [];
+  for (let i = 0; i < posts.length; i += perPage) {
+    pages.push(posts.slice(i, i + perPage));
+  }
+  return pages;
+}
+
 export default function BlogCarousel({ posts }: { posts: BlogPost[] }) {
-  const pageCount = Math.ceil(posts.length / PER_PAGE);
+  const pages = chunkPosts(posts, PER_PAGE);
+  const pageCount = pages.length;
   const [page, setPage] = useState(0);
   const [paused, setPaused] = useState(false);
 
-  const visible = posts.slice(page * PER_PAGE, page * PER_PAGE + PER_PAGE);
-
-  const goPrev = () => setPage((p) => Math.max(0, p - 1));
-  const goNext = () => setPage((p) => Math.min(pageCount - 1, p + 1));
+  const goPrev = () => setPage((p) => (p <= 0 ? pageCount - 1 : p - 1));
+  const goNext = () => setPage((p) => (p >= pageCount - 1 ? 0 : p + 1));
   const goTo = (i: number) => setPage(i);
 
   useEffect(() => {
@@ -57,53 +64,60 @@ export default function BlogCarousel({ posts }: { posts: BlogPost[] }) {
       setPage((p) => (p >= pageCount - 1 ? 0 : p + 1));
     }, AUTO_MS);
     return () => clearInterval(id);
-  }, [page, paused, pageCount]);
+  }, [paused, pageCount, page]);
 
   return (
     <div
       className="blog-carousel"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
     >
       <div className="blog-carousel-viewport">
         <button
           type="button"
           className="blog-carousel-arrow blog-carousel-arrow--prev"
           onClick={goPrev}
-          disabled={page === 0}
+          disabled={pageCount <= 1}
           aria-label="Previous articles"
         >
           <ChevronLeft />
         </button>
 
-        <div className="blog-carousel-row">
-          {visible.map((post) => (
-            <a
-              key={post.slug}
-              href={`/blog/${post.slug}`}
-              className="blog-card"
-            >
-              <div
-                className="blog-card-image"
-                style={{
-                  background: `linear-gradient(135deg, hsl(${post.hue} 35% 22%) 0%, hsl(${post.hue} 25% 12%) 100%)`,
-                }}
-              />
-              <div className="blog-card-body">
-                <h3 className="blog-card-title">{post.title}</h3>
-                <p className="blog-card-excerpt">{post.excerpt}</p>
+        <div className="blog-carousel-window">
+          <div
+            className="blog-carousel-track"
+            style={{ transform: `translateX(-${page * 100}%)` }}
+          >
+            {pages.map((slidePosts, slideIdx) => (
+              <div key={slideIdx} className="blog-carousel-slide">
+                {slidePosts.map((post) => (
+                  <a
+                    key={post.slug}
+                    href={`/blog/${post.slug}`}
+                    className="blog-card"
+                  >
+                    <div
+                      className="blog-card-image"
+                      style={{
+                        background: `linear-gradient(135deg, hsl(${post.hue} 35% 22%) 0%, hsl(${post.hue} 25% 12%) 100%)`,
+                      }}
+                    />
+                    <div className="blog-card-body">
+                      <h3 className="blog-card-title">{post.title}</h3>
+                      <p className="blog-card-excerpt">{post.excerpt}</p>
+                    </div>
+                  </a>
+                ))}
               </div>
-            </a>
-          ))}
+            ))}
+          </div>
         </div>
 
         <button
           type="button"
           className="blog-carousel-arrow blog-carousel-arrow--next"
           onClick={goNext}
-          disabled={page >= pageCount - 1}
+          disabled={pageCount <= 1}
           aria-label="Next articles"
         >
           <ChevronRight />
@@ -112,7 +126,7 @@ export default function BlogCarousel({ posts }: { posts: BlogPost[] }) {
 
       {pageCount > 1 && (
         <div className="blog-carousel-dots" role="tablist" aria-label="Article pages">
-          {Array.from({ length: pageCount }, (_, i) => (
+          {pages.map((_, i) => (
             <button
               key={i}
               type="button"
