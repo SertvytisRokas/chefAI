@@ -377,8 +377,21 @@ main.page {
   color: var(--text-color);
 }
 
-.auth-fields .btn-pill {
+.auth-fields .btn-auth-submit {
+  display: block;
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  text-align: center;
   margin-top: 1.5rem;
+  cursor: pointer;
+  font-family: inherit;
+  border: none;
+}
+
+.auth-fields .btn-auth-submit:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .auth-reqs-heading {
@@ -462,6 +475,73 @@ main.page {
 .auth-loading {
   text-align: center;
   color: var(--muted-text-color);
+}
+
+/* Sliding panels (log in ↔ sign up steps) */
+.auth-slider-viewport {
+  overflow: hidden;
+  width: 100%;
+  container-type: inline-size;
+}
+
+.auth-slider-track {
+  display: flex;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auth-slider-track {
+    transition: none;
+  }
+}
+
+.auth-slider-panel {
+  flex: 0 0 100cqw;
+  width: 100cqw;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.auth-hint {
+  text-align: center;
+  font-size: 0.92rem;
+  line-height: 1.55;
+  color: var(--muted-text-color);
+  margin: -1rem 0 1.5rem;
+}
+
+.auth-hint-email {
+  color: var(--text-color);
+  word-break: break-all;
+}
+
+.auth-input--code {
+  text-align: center;
+  letter-spacing: 0.35em;
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  padding-left: 1rem;
+  padding-right: 1rem;
+}
+
+.auth-error {
+  margin: 0.85rem 0 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--error-color);
+  text-align: center;
+}
+
+.auth-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  text-decoration: none;
+}
+
+.auth-back:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 /* ── User menu (avatar dropdown) ─────────────────────────────── */
