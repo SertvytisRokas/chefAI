@@ -1,11 +1,10 @@
 import './globals.css';
 import SupabaseProvider from '../components/SupabaseProvider';
-import TopBar from '../components/TopBar';
-import SideNav from '../components/SideNav';
+import AppShell from '../components/AppShell';
 import type { ReactNode } from 'react';
 
 export const metadata = {
-  title: 'Meal Genius',
+  title: 'chefAI — Cook smarter, waste less',
   description: 'Reduce food waste by creating meals from your fridge contents'
 };
 
@@ -24,13 +23,7 @@ export default function RootLayout({
     <html lang="en">
       <body>
         <SupabaseProvider>
-          <div className="app">
-            <TopBar />
-            <div className="app-body">
-              <SideNav />
-              <main className="page">{children}</main>
-            </div>
-          </div>
+          <AppShell>{children}</AppShell>
         </SupabaseProvider>
       </body>
     </html>

@@ -52,7 +52,7 @@ export default function TopBar() {
 
   return (
     <header className="top-bar">
-      <div className="title">Meal Genius</div>
+      <div className="title">chefAI</div>
       <div style={{ position: 'relative' }} ref={containerRef}>
         {user ? (
           <button

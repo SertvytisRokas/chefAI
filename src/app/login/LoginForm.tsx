@@ -13,7 +13,9 @@ export default function LoginForm() {
   const redirectPath = searchParams.get('redirect') || '/fridge';
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [mode, setMode] = useState<'login' | 'signup'>('login');
+  const [mode, setMode] = useState<'login' | 'signup'>(
+    () => (searchParams.get('mode') === 'signup' ? 'signup' : 'login')
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
