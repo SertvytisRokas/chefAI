@@ -56,8 +56,7 @@ function animateScrollTo(targetY: number, cancelRef: { current: (() => void) | n
 }
 
 /**
- * In-page anchor scroll. Aligns the target section's top edge with the
- * viewport top (background colour change sits flush with the window).
+ * In-page anchor scroll. Aligns the target section just below the sticky header.
  */
 export default function LandingScrollLink({
   href,
@@ -77,7 +76,9 @@ export default function LandingScrollLink({
     if (!target) return;
 
     e.preventDefault();
-    const top = target.getBoundingClientRect().top + getScrollY();
+    const header = document.querySelector<HTMLElement>('.landing-header');
+    const headerH = header?.offsetHeight ?? 0;
+    const top = target.getBoundingClientRect().top + getScrollY() - headerH;
     animateScrollTo(top, cancelRef);
   }
 

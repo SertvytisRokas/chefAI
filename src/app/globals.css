@@ -340,11 +340,8 @@ main.landing-main {
 }
 
 #the-problem,
+#articles,
 #how-it-works {
-  scroll-margin-top: 0;
-}
-
-#articles {
   scroll-margin-top: var(--landing-header-h);
 }
 
