@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { authEmailExists } from '../../../../lib/supabase/admin';
+import { getSignupEmailStatus } from '../../../../lib/supabase/admin';
 
 export async function POST(request: Request) {
   try {
@@ -9,8 +9,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
     }
 
-    const exists = await authEmailExists(email);
-    return NextResponse.json({ exists });
+    const status = await getSignupEmailStatus(email);
+    return NextResponse.json({
+      exists: status !== 'available',
+      status,
+    });
   } catch {
     return NextResponse.json({ error: 'Could not check email' }, { status: 500 });
   }

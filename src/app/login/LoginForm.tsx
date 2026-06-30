@@ -21,6 +21,7 @@ type PasswordChecks = {
   special: boolean;
 };
 
+/** Must match Supabase Dashboard → Auth → Providers → Email → Email OTP length */
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SEC = 60;
 const SPECIAL_CHAR_RE = /[#?!&@$%^*()_+\-=[\]{};':"\\|,.<>/~`]/;
@@ -106,14 +107,34 @@ function EyeIcon({ off }: { off: boolean }) {
   );
 }
 
+function isEmailNotConfirmedError(err: unknown): boolean {
+  if (err && typeof err === 'object') {
+    const code = (err as { code?: string }).code;
+    if (code === 'email_not_confirmed') return true;
+  }
+  if (err instanceof Error) {
+    const msg = err.message.toLowerCase();
+    return msg.includes('email not confirmed');
+  }
+  return false;
+}
+
 function AuthError({
   message,
   suggestLogin,
   onLogin,
+  suggestResendVerification,
+  onResendVerification,
+  resendLoading = false,
+  resendCooldown = 0,
 }: {
   message: string | null;
   suggestLogin?: boolean;
   onLogin?: () => void;
+  suggestResendVerification?: boolean;
+  onResendVerification?: () => void;
+  resendLoading?: boolean;
+  resendCooldown?: number;
 }) {
   if (!message) return null;
   return (
@@ -123,6 +144,22 @@ function AuthError({
         <p className="auth-error-action">
           <button type="button" className="auth-link" onClick={onLogin}>
             Log in instead
+          </button>
+        </p>
+      )}
+      {suggestResendVerification && onResendVerification && (
+        <p className="auth-error-action">
+          <button
+            type="button"
+            className="auth-link"
+            onClick={onResendVerification}
+            disabled={resendLoading || resendCooldown > 0}
+          >
+            {resendLoading
+              ? 'Sending…'
+              : resendCooldown > 0
+                ? `Resend in ${resendCooldown}s`
+                : 'Resend verification code'}
           </button>
         </p>
       )}
@@ -151,6 +188,7 @@ export default function LoginForm() {
   const [resendCooldown, setResendCooldown] = useState(0);
   const [authError, setAuthError] = useState<string | null>(null);
   const [suggestLogin, setSuggestLogin] = useState(false);
+  const [showResendVerification, setShowResendVerification] = useState(false);
   const resendIntervalRef = useRef<number | null>(null);
 
   const passwordChecks = checkPassword(password);
@@ -161,6 +199,7 @@ export default function LoginForm() {
   const clearError = useCallback(() => {
     setAuthError(null);
     setSuggestLogin(false);
+    setShowResendVerification(false);
   }, []);
 
   const startResendCooldown = useCallback(() => {
@@ -250,7 +289,14 @@ export default function LoginForm() {
       if (data.session) router.replace(redirectPath);
       else setAuthError('Could not start your session. Try again.');
     } catch (err: unknown) {
-      setAuthError(authErrorMessage(err));
+      if (isEmailNotConfirmedError(err)) {
+        setAuthError(
+          'Confirm your email before logging in. You have 1 hour from sign up to verify, or the account is removed.'
+        );
+        setShowResendVerification(true);
+      } else {
+        setAuthError(authErrorMessage(err));
+      }
     } finally {
       setLoading(false);
     }
@@ -293,7 +339,6 @@ export default function LoginForm() {
 
       setVerificationCode('');
       goToSignupStep('verify');
-      startResendCooldown();
     } catch (err: unknown) {
       setAuthError(authErrorMessage(err));
     } finally {
@@ -383,13 +428,24 @@ export default function LoginForm() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: normalizedEmail }),
       });
-      const data = (await res.json()) as { exists?: boolean; error?: string };
+      const data = (await res.json()) as {
+        exists?: boolean;
+        status?: 'available' | 'confirmed' | 'pending_verification';
+        error?: string;
+      };
       if (!res.ok) {
         setAuthError('Could not verify this email. Try again.');
         return;
       }
-      if (data.exists) {
+      if (data.status === 'confirmed') {
         setAuthError('An account with this email already exists.');
+        setSuggestLogin(true);
+        return;
+      }
+      if (data.status === 'pending_verification') {
+        setAuthError(
+          'Verification is already pending for this email. Log in to resend the code, or wait up to 1 hour to sign up again.'
+        );
         setSuggestLogin(true);
         return;
       }
@@ -462,7 +518,13 @@ export default function LoginForm() {
                     <EyeIcon off={showPassword} />
                   </button>
                 </div>
-                <AuthError message={authError} />
+                <AuthError
+                  message={authError}
+                  suggestResendVerification={showResendVerification}
+                  onResendVerification={handleResendCode}
+                  resendLoading={resendLoading}
+                  resendCooldown={resendCooldown}
+                />
                 <button
                   type="submit"
                   disabled={busy}
@@ -645,7 +707,7 @@ export default function LoginForm() {
               <p className="auth-hint">
                 We sent a {OTP_LENGTH}-digit code to{' '}
                 <span className="auth-hint-email">{normalizeEmail(email) || 'your email'}</span>.
-                You can enter it below, or use the confirmation link in the same email.
+                Verify within 1 hour, or use the confirmation link in the same email.
               </p>
               <form onSubmit={handleVerify} className="auth-fields" noValidate>
                 <label className="auth-label" htmlFor="signup-code">
