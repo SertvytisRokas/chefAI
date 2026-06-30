@@ -54,23 +54,35 @@ const FEATURES = [
   },
   {
     title: 'Recipe Genius',
-    text: 'Generate a custom recipe on demand from whatever is in your fridge right now — no generic meal plans.',
+    text: 'Generate a custom recipe on demand from whatever is in your fridge right now.',
   },
   {
     title: 'Weekly meal plans',
-    text: 'Plan breakfast, lunch, and dinner for seven days in one go, prioritising ingredients closest to expiring.',
+    text: 'Plan breakfast, lunch, and dinner for seven days, prioritising ingredients closest to expiring.',
   },
   {
     title: 'Deep personalization',
-    text: 'Diet type, allergens, religious and cultural restrictions, cuisines, portions, time, and budget — all respected.',
+    text: 'Diet, allergens, likes and dislikes, religious and cultural rules, cuisines, portions, time, and budget.',
   },
   {
     title: 'Strict or suggest mode',
-    text: 'Cook with only what you have, or allow a small gap of extra ingredients and send the rest to your shopping list.',
+    text: 'Cook with only what you have, or allow small gaps and send missing items to your shopping list.',
   },
   {
-    title: 'History & shopping',
-    text: 'Save and rate recipes, mark favourites, and move purchased items straight into your fridge.',
+    title: 'Shopping list',
+    text: 'Collect missing ingredients from suggest-mode recipes and move purchased items into your fridge.',
+  },
+  {
+    title: 'History & favourites',
+    text: 'Save recipes, rate them, and keep favourites — your personal cookbook grows as you cook.',
+  },
+  {
+    title: 'Adaptive assistant',
+    text: 'Learns from your ratings and optional comments, spotting patterns in what you love so future recipes improve over time.',
+  },
+  {
+    title: 'Expiry-first cooking',
+    text: 'Plans and recipes surface ingredients about to expire first, so nothing gets forgotten at the back of the fridge.',
   },
 ];
 
@@ -161,7 +173,7 @@ export default function HomePage() {
       {/* Features / main sell */}
       <section
         id="how-it-works"
-        className="landing-section landing-section-alt landing-screen landing-panel-section"
+        className="landing-section landing-section-alt landing-features-section"
       >
         <div className="landing-container landing-panel-inner">
           <h2 className="landing-section-title">Everything you need to waste less</h2>
