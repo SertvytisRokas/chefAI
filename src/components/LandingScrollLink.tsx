@@ -1,40 +1,63 @@
 'use client';
 
-import type { ReactNode, MouseEvent } from 'react';
+import { useRef, type ReactNode, type MouseEvent } from 'react';
 
-const SCROLL_DURATION_MS = 700;
+const SCROLL_DURATION_MS = 1000;
 
-function easeOutCubic(t: number): number {
-  return 1 - Math.pow(1 - t, 3);
+function easeInOutCubic(t: number): number {
+  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-function smoothScrollTo(targetY: number, duration = SCROLL_DURATION_MS): void {
-  const prefersReduced =
-    typeof window !== 'undefined' &&
-    window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function getScrollY(): number {
+  return window.scrollY || document.documentElement.scrollTop;
+}
 
-  if (prefersReduced) {
-    window.scrollTo(0, targetY);
-    return;
-  }
-
-  const startY = window.scrollY;
-  const distance = targetY - startY;
-  const startTime = performance.now();
-
-  function step(now: number) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    window.scrollTo(0, startY + distance * easeOutCubic(progress));
-    if (progress < 1) requestAnimationFrame(step);
-  }
-
-  requestAnimationFrame(step);
+function setScrollY(y: number): void {
+  window.scrollTo(0, y);
 }
 
 /**
- * In-page anchor scroll that offsets for the sticky landing header.
- * Measures the header at click time so it works on every screen size.
+ * Smooth scroll via rAF — avoids inconsistent native `behavior: 'smooth'`.
+ * Cancels any in-flight scroll when triggered again.
+ */
+function animateScrollTo(targetY: number, cancelRef: { current: (() => void) | null }): void {
+  const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (prefersReduced) {
+    setScrollY(targetY);
+    return;
+  }
+
+  cancelRef.current?.();
+  cancelRef.current = null;
+
+  const startY = getScrollY();
+  const distance = targetY - startY;
+  if (Math.abs(distance) < 1) return;
+
+  let cancelled = false;
+  cancelRef.current = () => {
+    cancelled = true;
+  };
+
+  const startTime = performance.now();
+
+  function tick(now: number) {
+    if (cancelled) return;
+    const progress = Math.min((now - startTime) / SCROLL_DURATION_MS, 1);
+    setScrollY(startY + distance * easeInOutCubic(progress));
+    if (progress < 1) {
+      requestAnimationFrame(tick);
+    } else {
+      cancelRef.current = null;
+    }
+  }
+
+  requestAnimationFrame(tick);
+}
+
+/**
+ * In-page anchor scroll. Aligns the target section's top edge with the
+ * viewport top (background colour change sits flush with the window).
  */
 export default function LandingScrollLink({
   href,
@@ -45,6 +68,8 @@ export default function LandingScrollLink({
   className?: string;
   children: ReactNode;
 }) {
+  const cancelRef = useRef<(() => void) | null>(null);
+
   function handleClick(e: MouseEvent<HTMLAnchorElement>) {
     if (!href.startsWith('#')) return;
     const id = href.slice(1);
@@ -52,12 +77,8 @@ export default function LandingScrollLink({
     if (!target) return;
 
     e.preventDefault();
-    const header = document.querySelector<HTMLElement>('.landing-header');
-    const headerH = header?.offsetHeight ?? 0;
-    const top =
-      target.getBoundingClientRect().top + window.scrollY - headerH;
-
-    smoothScrollTo(top);
+    const top = target.getBoundingClientRect().top + getScrollY();
+    animateScrollTo(top, cancelRef);
   }
 
   return (

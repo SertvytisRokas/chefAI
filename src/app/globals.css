@@ -328,31 +328,23 @@ main.page {
   margin-bottom: 0.5rem;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  html {
-    scroll-behavior: auto;
-  }
-}
-
 /* ── Landing page ─────────────────────────────────────────────── */
 
 :root {
-  --landing-header-h: 3.5625rem; /* matches sticky landing-header */
+  --landing-header-h: 3.5625rem;
 }
 
 main.landing-main {
   flex: 1;
   padding: 0;
-  scroll-padding-top: var(--landing-header-h);
 }
 
 #the-problem,
-#articles,
 #how-it-works {
+  scroll-margin-top: 0;
+}
+
+#articles {
   scroll-margin-top: var(--landing-header-h);
 }
 
