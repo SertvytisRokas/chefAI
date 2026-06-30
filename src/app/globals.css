@@ -641,6 +641,9 @@ main.landing-main {
   min-width: 0;
   container-type: inline-size;
   --blog-carousel-gap: 1rem;
+  /* Room for card lift + shadow on hover (parent clips overflow) */
+  padding: 6px 0 4px;
+  margin: -6px 0 -4px;
 }
 
 .blog-carousel-track {
