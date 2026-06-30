@@ -366,17 +366,41 @@ export default function LoginForm() {
     }
   }
 
-  function handleSignupEmailNext(e: React.FormEvent) {
+  async function handleSignupEmailNext(e: React.FormEvent) {
     e.preventDefault();
     if (busy) return;
-    if (!normalizeEmail(email)) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!normalizedEmail) {
       setAuthError('Enter a valid email address.');
       return;
     }
+
+    setLoading(true);
     clearError();
-    setPassword('');
-    setShowPassword(false);
-    goToSignupStep('password');
+    try {
+      const res = await fetch('/api/auth/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const data = (await res.json()) as { exists?: boolean; error?: string };
+      if (!res.ok) {
+        setAuthError('Could not verify this email. Try again.');
+        return;
+      }
+      if (data.exists) {
+        setAuthError('An account with this email already exists.');
+        setSuggestLogin(true);
+        return;
+      }
+      setPassword('');
+      setShowPassword(false);
+      goToSignupStep('password');
+    } catch {
+      setAuthError('Could not verify this email. Try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -484,13 +508,17 @@ export default function LoginForm() {
                   autoComplete="email"
                   disabled={busy}
                 />
-                <AuthError message={mode === 'signup' && signupStep === 'email' ? authError : null} />
+                <AuthError
+                  message={mode === 'signup' && signupStep === 'email' ? authError : null}
+                  suggestLogin={suggestLogin}
+                  onLogin={() => switchMode('login')}
+                />
                 <button
                   type="submit"
                   disabled={busy}
                   className="btn btn-landing-primary btn-auth-submit"
                 >
-                  Next
+                  {loading ? 'Checking…' : 'Next'}
                 </button>
               </form>
               <p className="auth-switch">
