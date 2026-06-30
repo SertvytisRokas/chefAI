@@ -3,24 +3,26 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Live counters derived from published global estimates.
- * Rates are linear projections from annual figures — illustrative,
- * not real-time sensor data.
+ * Live-style counters projected from published FAO / UNEP annual figures.
+ * There is no official UN live API — third-party widgets (e.g. live-counter.com)
+ * use the same ~1.3B t/year FAO estimate at ~41 t/s; we tick locally so styling
+ * matches the app.
  *
- * Sources:
- * - UNEP Food Waste Index Report 2021 (~931M tonnes/year consumer + retail)
- * - FAO SOFI 2023 (~735M people facing chronic hunger, 2022)
- * - FAO: ~1/3 of food produced for human consumption is lost or wasted
+ * Source tiers:
+ * - LIVE (projected): annual rate → elapsed time this year / today
+ * - OFFICIAL (static): FAO hunger figure from SOFI reports
+ * - ESTIMATED (derived): meals calculable from today's waste projection
  */
 
-const TONNES_PER_YEAR = 931_000_000;
+const TONNES_PER_YEAR = 1_300_000_000; // FAO / UNEP cited global estimate
 const SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60;
 const TONNES_PER_SECOND = TONNES_PER_YEAR / SECONDS_PER_YEAR;
-
-/** Rough average meal mass used for "meals recoverable" estimate */
 const KG_PER_MEAL = 0.45;
 
+/** FAO SOFI 2023 — people facing chronic hunger (2022 data), not live-updated */
 const HUNGER_COUNT = 735_000_000;
+
+type CounterTier = 'live' | 'official' | 'estimated';
 
 function yearStartMs(): number {
   const now = new Date();
@@ -40,10 +42,16 @@ function formatCompact(n: number): string {
 }
 
 function formatTonnes(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)} million t`;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M t`;
   if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K t`;
   return `${Math.floor(n).toLocaleString()} t`;
 }
+
+const TIER_LABEL: Record<CounterTier, string> = {
+  live: 'Live projection',
+  official: 'Official estimate',
+  estimated: 'Derived estimate',
+};
 
 export default function FoodWasteCounters() {
   const [now, setNow] = useState(() => Date.now());
@@ -60,26 +68,35 @@ export default function FoodWasteCounters() {
   const wastedToday = todayElapsedSec * TONNES_PER_SECOND;
   const mealsFromTodayWaste = (wastedToday * 1000) / KG_PER_MEAL;
 
-  const counters = [
+  const counters: {
+    label: string;
+    value: string;
+    sub: string;
+    tier: CounterTier;
+  }[] = [
     {
       label: 'Food wasted this year',
       value: formatTonnes(wastedThisYear),
-      sub: 'Projected from ~931M t/year globally',
+      sub: '1.3B t/year rate (FAO / UNEP)',
+      tier: 'live',
     },
     {
       label: 'Food wasted today',
       value: formatTonnes(wastedToday),
-      sub: 'Updating live',
+      sub: '~41 tonnes per second globally',
+      tier: 'live',
     },
     {
       label: 'People facing hunger',
       value: formatCompact(HUNGER_COUNT),
-      sub: 'FAO estimate (2022)',
+      sub: 'FAO SOFI 2023 (2022 data)',
+      tier: 'official',
     },
     {
       label: 'Meals lost from today\u2019s waste',
       value: formatCompact(mealsFromTodayWaste),
-      sub: 'If redirected at ~450 g per meal',
+      sub: 'At ~450 g per meal — illustrative',
+      tier: 'estimated',
     },
   ];
 
@@ -87,6 +104,9 @@ export default function FoodWasteCounters() {
     <div className="waste-counters">
       {counters.map((c) => (
         <div key={c.label} className="waste-counter-card">
+          <span className={`waste-counter-tier waste-counter-tier--${c.tier}`}>
+            {TIER_LABEL[c.tier]}
+          </span>
           <p className="waste-counter-value">{c.value}</p>
           <p className="waste-counter-label">{c.label}</p>
           <p className="waste-counter-sub">{c.sub}</p>

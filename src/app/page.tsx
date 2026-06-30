@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import FoodWasteCounters from '../components/FoodWasteCounters';
+import BlogCarousel from '../components/BlogCarousel';
 
 const BLOG_PLACEHOLDERS = [
   {
@@ -46,15 +47,42 @@ const BLOG_PLACEHOLDERS = [
   },
 ];
 
+const FEATURES = [
+  {
+    title: 'Fridge inventory',
+    text: 'Track quantities, units, and expiry dates so soon-to-spoil items surface before they hit the bin.',
+  },
+  {
+    title: 'Recipe Genius',
+    text: 'Generate a custom recipe on demand from whatever is in your fridge right now — no generic meal plans.',
+  },
+  {
+    title: 'Weekly meal plans',
+    text: 'Plan breakfast, lunch, and dinner for seven days in one go, prioritising ingredients closest to expiring.',
+  },
+  {
+    title: 'Deep personalization',
+    text: 'Diet type, allergens, religious and cultural restrictions, cuisines, portions, time, and budget — all respected.',
+  },
+  {
+    title: 'Strict or suggest mode',
+    text: 'Cook with only what you have, or allow a small gap of extra ingredients and send the rest to your shopping list.',
+  },
+  {
+    title: 'History & shopping',
+    text: 'Save and rate recipes, mark favourites, and move purchased items straight into your fridge.',
+  },
+];
+
 /**
  * Public landing page — hero, food-waste awareness, blog previews,
- * how-it-works, and footer. All sections scroll on this single page.
+ * features, and footer. All sections scroll on this single page.
  */
 export default function HomePage() {
   return (
     <div className="landing">
-      {/* Hero */}
-      <section className="landing-hero">
+      {/* Hero — exactly one viewport below the header */}
+      <section className="landing-hero landing-screen">
         <div className="landing-hero-inner">
           <p className="landing-eyebrow">Reduce waste. Cook smarter.</p>
           <h1 className="landing-hero-title">
@@ -70,17 +98,20 @@ export default function HomePage() {
               Get started free
             </Link>
             <a href="#the-problem" className="btn btn-landing-ghost btn-lg">
-              Learn why it matters
+              Why it matters
             </a>
           </div>
         </div>
       </section>
 
       {/* Problem & live counters */}
-      <section id="the-problem" className="landing-section landing-section-alt">
-        <div className="landing-container">
+      <section
+        id="the-problem"
+        className="landing-section landing-section-alt landing-screen landing-panel-section"
+      >
+        <div className="landing-container landing-panel-inner">
           <h2 className="landing-section-title">Food waste is a crisis we can fix</h2>
-          <p className="landing-section-lead">
+          <p className="landing-section-lead landing-section-lead--compact">
             Roughly one-third of all food produced for human consumption is lost
             or wasted globally each year. That is enough to feed billions — while
             hundreds of millions still go hungry. Most household waste is
@@ -88,16 +119,17 @@ export default function HomePage() {
           </p>
           <FoodWasteCounters />
           <p className="landing-source-note">
-            Live counters are illustrative projections based on published annual
-            estimates. Sources:{' '}
+            No official UN live API exists — counters marked &ldquo;live projection&rdquo;
+            tick from the FAO / UNEP ~1.3B t/year rate (~41 t/s). Hunger figure is
+            static FAO data. &ldquo;Meals lost&rdquo; is a derived illustration.{' '}
             <a
-              href="https://www.unep.org/resources/report/food-waste-index-report-2021"
+              href="https://www.unep.org/resources/publication/food-waste-index-report-2024"
               target="_blank"
               rel="noopener noreferrer"
             >
-              UNEP Food Waste Index 2021
+              UNEP 2024
             </a>
-            ,{' '}
+            {' · '}
             <a
               href="https://www.fao.org/publications/sofi/2023/en"
               target="_blank"
@@ -105,79 +137,45 @@ export default function HomePage() {
             >
               FAO SOFI 2023
             </a>
-            .
           </p>
         </div>
       </section>
 
-      {/* Blog previews */}
-      <section id="articles" className="landing-section">
-        <div className="landing-container">
+      {/* Blog previews — one viewport */}
+      <section id="articles" className="landing-section landing-screen landing-articles-section">
+        <div className="landing-container landing-panel-inner">
           <h2 className="landing-section-title">Stories &amp; insights</h2>
-          <p className="landing-section-lead">
+          <p className="landing-section-lead landing-section-lead--compact">
             Articles on food waste, sustainable cooking, and practical tips for
             making the most of what you already have.
           </p>
-          <div className="blog-grid">
-            {BLOG_PLACEHOLDERS.map((post) => (
-              <a
-                key={post.slug}
-                href={`/blog/${post.slug}`}
-                className="blog-card"
-              >
-                <div
-                  className="blog-card-image"
-                  style={{
-                    background: `linear-gradient(135deg, hsl(${post.hue} 35% 22%) 0%, hsl(${post.hue} 25% 12%) 100%)`,
-                  }}
-                />
-                <div className="blog-card-body">
-                  <h3 className="blog-card-title">{post.title}</h3>
-                  <p className="blog-card-excerpt">{post.excerpt}</p>
-                </div>
-              </a>
-            ))}
-          </div>
+          <BlogCarousel posts={BLOG_PLACEHOLDERS} />
           <div className="blog-read-more">
             <Link href="/blog" className="btn btn-landing-primary btn-lg">
-              Read more articles
+              Read more
             </Link>
           </div>
         </div>
       </section>
 
-      {/* How it works */}
-      <section id="how-it-works" className="landing-section landing-section-alt">
-        <div className="landing-container">
-          <h2 className="landing-section-title">How chefAI works</h2>
-          <p className="landing-section-lead">
-            Three simple steps between a full fridge and less waste on your plate.
+      {/* Features / main sell */}
+      <section
+        id="how-it-works"
+        className="landing-section landing-section-alt landing-screen landing-panel-section"
+      >
+        <div className="landing-container landing-panel-inner">
+          <h2 className="landing-section-title">Everything you need to waste less</h2>
+          <p className="landing-section-lead landing-section-lead--compact">
+            chefAI is built around your real kitchen — your ingredients, your
+            constraints, and your schedule.
           </p>
-          <div className="steps-grid">
-            <div className="step-card">
-              <span className="step-number">01</span>
-              <h3>Track your fridge</h3>
-              <p>
-                Add what you have — quantities, units, and expiry dates — so
-                nothing slips through unnoticed.
-              </p>
-            </div>
-            <div className="step-card">
-              <span className="step-number">02</span>
-              <h3>Get tailored recipes</h3>
-              <p>
-                AI generates meals from your actual ingredients, respecting your
-                diet, allergens, and tastes.
-              </p>
-            </div>
-            <div className="step-card">
-              <span className="step-number">03</span>
-              <h3>Waste less, save more</h3>
-              <p>
-                Cook what&apos;s about to expire first, build shopping lists only
-                for real gaps, and keep food out of the bin.
-              </p>
-            </div>
+          <div className="features-grid">
+            {FEATURES.map((f) => (
+              <div key={f.title} className="feature-card">
+                <h3>{f.title}</h3>
+                <p>{f.text}</p>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -191,48 +189,28 @@ export default function HomePage() {
             trips to the store required.
           </p>
           <Link href="/login?mode=signup" className="btn btn-landing-primary btn-lg">
-            Create your free account
+            Get started
           </Link>
         </div>
       </section>
 
       {/* Footer */}
       <footer className="landing-footer">
-        <div className="landing-container landing-footer-grid">
-          <div className="footer-col">
+        <div className="landing-container landing-footer-bar">
+          <div className="footer-brand-block">
             <p className="footer-brand">
               chef<span className="landing-logo-accent">AI</span>
             </p>
-            <p className="footer-tagline">
-              Smart cooking from your fridge. Less waste, more meals.
-            </p>
+            <p className="footer-tagline">Less waste, more meals.</p>
           </div>
-          <div className="footer-col">
-            <p className="footer-heading">Product</p>
-            <a href="#how-it-works">How it works</a>
-            <a href="/login?mode=signup">Sign up</a>
-            <a href="/login">Log in</a>
-          </div>
-          <div className="footer-col">
-            <p className="footer-heading">Resources</p>
-            <a href="#articles">Articles</a>
-            <Link href="/blog">Blog library</Link>
-            <a href="#the-problem">Food waste facts</a>
-          </div>
-          <div className="footer-col">
-            <p className="footer-heading">Legal</p>
-            <a href="#">Privacy policy</a>
-            <a href="#">Terms of service</a>
+          <nav className="footer-links" aria-label="Footer">
+            <Link href="/blog">Articles &amp; insights</Link>
+            <span className="footer-divider" aria-hidden="true" />
+            <a href="#">Privacy</a>
+            <a href="#">Terms</a>
             <a href="#">Contact</a>
-          </div>
-        </div>
-        <div className="landing-container landing-footer-bottom">
-          <p>&copy; {new Date().getFullYear()} chefAI. All rights reserved.</p>
-          <div className="footer-social">
-            <a href="#" aria-label="Twitter / X">X</a>
-            <a href="#" aria-label="Instagram">Instagram</a>
-            <a href="#" aria-label="LinkedIn">LinkedIn</a>
-          </div>
+          </nav>
+          <p className="footer-copy">&copy; {new Date().getFullYear()} chefAI</p>
         </div>
       </footer>
     </div>
