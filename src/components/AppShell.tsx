@@ -2,33 +2,25 @@
 
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
-import TopBar from './TopBar';
 import LandingHeader from './LandingHeader';
 import SideNav from './SideNav';
+import { useUser } from './SupabaseProvider';
 
 /**
- * Chooses between the marketing shell (landing) and the app shell
- * (top bar + side nav) based on the current route.
+ * Unified shell: landing header on every route; side nav only when signed in.
  */
 export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const isMarketing = pathname === '/' || pathname === '/login';
-
-  if (isMarketing) {
-    return (
-      <div className="app">
-        <LandingHeader />
-        <main className={pathname === '/' ? 'landing-main' : 'page'}>{children}</main>
-      </div>
-    );
-  }
+  const user = useUser();
+  const isLanding = pathname === '/';
+  const showSideNav = Boolean(user) && pathname !== '/login';
 
   return (
     <div className="app">
-      <TopBar />
+      <LandingHeader />
       <div className="app-body">
-        <SideNav />
-        <main className="page">{children}</main>
+        {showSideNav && <SideNav />}
+        <main className={isLanding ? 'landing-main' : 'page'}>{children}</main>
       </div>
     </div>
   );

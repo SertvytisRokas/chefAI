@@ -2,10 +2,10 @@
 
 import Link from 'next/link';
 import { useUser } from './SupabaseProvider';
+import UserMenu from './UserMenu';
 
 /**
- * Marketing header for the landing page. Logo on the left,
- * login / register on the right (or app link when signed in).
+ * Site header — logo left; log in / sign up or avatar menu right.
  */
 export default function LandingHeader() {
   const user = useUser();
@@ -17,16 +17,14 @@ export default function LandingHeader() {
       </Link>
       <nav className="landing-nav">
         {user ? (
-          <Link href="/fridge" className="btn btn-landing-primary">
-            Open app
-          </Link>
+          <UserMenu />
         ) : (
           <>
             <Link href="/login" className="btn btn-landing-ghost">
               Log in
             </Link>
             <Link href="/login?mode=signup" className="btn btn-landing-primary">
-              Register
+              Sign up
             </Link>
           </>
         )}

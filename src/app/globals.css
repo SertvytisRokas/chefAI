@@ -18,6 +18,9 @@
   --accent-muted: #1a3328;
   --error-color: #f87171;
   --success-color: #34d399;
+  --radius-pill: 999px;
+  --radius-md: 8px;
+  --radius-sm: 6px;
 }
 
 /* Reset */
@@ -48,11 +51,11 @@ button {
 input,
 select,
 textarea {
-  background-color: var(--surface-color);
+  background-color: var(--bg-color);
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 0.5rem;
+  border-radius: var(--radius-sm);
+  padding: 0.65rem 0.85rem;
   font-size: 0.95rem;
   width: 100%;
   box-sizing: border-box;
@@ -79,18 +82,45 @@ input[type="number"] {
 .btn {
   display: inline-block;
   background-color: var(--accent-color);
-  color: #ffffff;
+  color: #0b100e;
   border: none;
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
+  border-radius: var(--radius-pill);
+  padding: 0.55rem 1.15rem;
   font-size: 0.95rem;
-  transition: background-color 0.2s ease;
+  font-weight: 600;
+  transition: background-color 0.2s ease, transform 0.15s ease;
 }
 .btn:hover {
   background-color: var(--accent-hover);
 }
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-pill {
+  display: block;
+  width: 100%;
+  padding: 0.9rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 700;
+  border-radius: var(--radius-pill);
+  text-align: center;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background-color 0.2s ease, opacity 0.2s ease;
+}
+
+.btn-pill-primary {
+  background-color: var(--accent-color);
+  color: #0b100e;
+}
+.btn-pill-primary:hover:not(:disabled) {
+  background-color: var(--accent-hover);
+}
+.btn-pill-primary:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
@@ -102,9 +132,10 @@ input[type="number"] {
   background-color: var(--error-color);
   color: #ffffff;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   padding: 0.5rem 1rem;
   font-size: 0.95rem;
+  font-weight: 600;
   transition: background-color 0.2s ease;
 }
 .btn-cancel:hover {
@@ -209,53 +240,299 @@ tr:hover {
 }
 
 .side-nav {
-  width: 200px;
+  width: 210px;
   background-color: var(--surface-color);
   border-right: 1px solid var(--border-color);
-  padding-top: 1rem;
+  padding: 0.75rem 0;
   flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
-.side-nav a {
+
+.side-nav-links {
+  flex: 1;
+}
+
+.side-nav a,
+.side-nav-articles {
   display: block;
-  padding: 0.75rem 1rem;
+  padding: 0.7rem 1.1rem;
+  margin: 0 0.5rem;
   color: var(--text-color);
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
+  border-radius: var(--radius-pill);
+  transition: background-color 0.15s ease, color 0.15s ease;
 }
+
+.side-nav-articles {
+  border-top: 1px solid var(--border-color);
+  margin-top: 0.5rem;
+  padding-top: 0.85rem;
+}
+
 .side-nav a.active,
-.side-nav a:hover {
+.side-nav a:hover,
+.side-nav-articles.active,
+.side-nav-articles:hover {
   background-color: var(--surface-hover);
   color: var(--accent-color);
 }
 
 main.page {
   flex: 1;
-  padding: 1.5rem;
+  padding: 1.5rem 2rem;
+  min-width: 0;
 }
 
-/* Auth page container */
-.auth-container {
-  width: 360px;
-  margin: 3rem auto;
-  background-color: var(--surface-color);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 2rem;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+/* ── Auth (log in / sign up) ─────────────────────────────────── */
+
+.auth-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100dvh - var(--landing-header-h) - 2rem);
+  padding: 2rem 1.5rem 3rem;
 }
-.auth-container h1 {
-  margin-bottom: 1rem;
-  font-size: 1.5rem;
+
+.auth-form {
+  width: 100%;
+  max-width: 420px;
+}
+
+.auth-brand {
+  display: block;
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-color);
+  text-decoration: none;
+  letter-spacing: -0.02em;
+  margin-bottom: 2rem;
+}
+.auth-brand:hover {
+  color: var(--text-color);
+}
+
+.auth-title {
+  font-size: clamp(1.75rem, 5vw, 2.35rem);
+  font-weight: 700;
+  text-align: center;
+  line-height: 1.2;
+  margin: 0 0 2rem;
+  letter-spacing: -0.02em;
+}
+
+.auth-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.auth-label {
+  display: block;
+  font-size: 0.9rem;
   font-weight: 600;
+  margin-top: 0.75rem;
+  margin-bottom: 0.35rem;
 }
-.auth-container .switch-link {
-  color: var(--accent-color);
+
+.auth-input {
+  background-color: var(--bg-color);
+  border: 1px solid var(--muted-text-color);
+  border-radius: var(--radius-sm);
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+}
+
+.auth-input:focus {
+  border-color: var(--text-color);
+}
+
+.auth-password-wrap {
+  position: relative;
+}
+
+.auth-input--password {
+  padding-right: 3rem;
+}
+
+.auth-password-toggle {
+  position: absolute;
+  right: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
   background: none;
   border: none;
-  text-decoration: underline;
+  color: var(--muted-text-color);
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
+}
+
+.auth-password-toggle:hover {
+  color: var(--text-color);
+}
+
+.auth-fields .btn-pill {
+  margin-top: 1.5rem;
+}
+
+.auth-reqs-heading {
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 1.25rem 0 0.65rem;
+}
+
+.auth-reqs {
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-reqs li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  font-size: 0.88rem;
+  color: var(--muted-text-color);
+  line-height: 1.4;
+}
+
+.auth-reqs li.met {
+  color: var(--text-color);
+}
+
+.auth-req-mark {
+  flex-shrink: 0;
+  width: 1.1rem;
+  font-size: 0.85rem;
+  color: var(--muted-text-color);
+}
+
+.auth-reqs li.met .auth-req-mark {
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+.auth-switch {
+  text-align: center;
+  margin-top: 2rem;
+  font-size: 0.95rem;
+  color: var(--muted-text-color);
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  text-decoration: underline;
+  font-size: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  font-family: inherit;
+}
+
+.auth-link:hover {
+  color: var(--accent-color);
+}
+
+.auth-back {
+  background: none;
+  border: none;
+  color: var(--muted-text-color);
   font-size: 0.9rem;
   padding: 0;
+  margin-bottom: 1rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.auth-back:hover {
+  color: var(--text-color);
+}
+
+.auth-loading {
+  text-align: center;
+  color: var(--muted-text-color);
+}
+
+/* ── User menu (avatar dropdown) ─────────────────────────────── */
+
+.user-menu {
+  position: relative;
+}
+
+.user-menu-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  background: linear-gradient(145deg, var(--accent-muted), var(--surface-hover));
+  color: var(--accent-color);
+  font-size: 1rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-menu-avatar:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(61, 170, 114, 0.15);
+}
+
+.user-menu-dropdown {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  min-width: 200px;
+  background-color: var(--surface-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  z-index: 200;
+}
+
+.user-menu-email {
+  margin: 0;
+  padding: 0.65rem 1rem;
+  font-size: 0.75rem;
+  color: var(--muted-text-color);
+  border-bottom: 1px solid var(--border-color);
+  word-break: break-all;
+}
+
+.user-menu-dropdown a,
+.user-menu-dropdown button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 1rem;
+  color: var(--text-color);
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.user-menu-dropdown a:hover,
+.user-menu-dropdown button:hover {
+  background-color: var(--surface-hover);
+  color: var(--accent-color);
 }
 
 /* Profile page tabs */
@@ -277,6 +554,10 @@ main.page {
   border-bottom-color: var(--accent-color);
   color: var(--accent-color);
   font-weight: 600;
+}
+
+.tab-row button {
+  border-radius: var(--radius-pill) var(--radius-pill) 0 0;
 }
 
 /* Utility spacing classes */
@@ -315,7 +596,7 @@ main.page {
 .modal-content {
   background-color: var(--surface-color);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-md);
   padding: 1rem;
   max-width: 600px;
   width: 90%;
@@ -382,7 +663,7 @@ main.landing-main {
   background-color: var(--accent-color);
   color: #0b100e;
   font-weight: 600;
-  border-radius: 6px;
+  border-radius: var(--radius-pill);
   text-decoration: none;
   transition: background-color 0.2s ease, transform 0.15s ease;
 }
@@ -395,7 +676,7 @@ main.landing-main {
   background: transparent;
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-pill);
   text-decoration: none;
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
@@ -610,7 +891,7 @@ main.landing-main {
   text-transform: uppercase;
   letter-spacing: 0.06em;
   padding: 0.18rem 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--radius-pill);
   margin: 0;
   text-decoration: none;
   transition: opacity 0.15s ease, filter 0.15s ease;
