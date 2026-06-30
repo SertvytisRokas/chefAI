@@ -328,6 +328,16 @@ main.page {
   margin-bottom: 0.5rem;
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
 /* ── Landing page ─────────────────────────────────────────────── */
 
 :root {
@@ -337,6 +347,13 @@ main.page {
 main.landing-main {
   flex: 1;
   padding: 0;
+  scroll-padding-top: var(--landing-header-h);
+}
+
+#the-problem,
+#articles,
+#how-it-works {
+  scroll-margin-top: var(--landing-header-h);
 }
 
 .landing-header {

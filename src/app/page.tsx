@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import FoodWasteCounters from '../components/FoodWasteCounters';
 import BlogCarousel from '../components/BlogCarousel';
+import LandingScrollLink from '../components/LandingScrollLink';
 
 const BLOG_PLACEHOLDERS = [
   {
@@ -109,9 +110,9 @@ export default function HomePage() {
             <Link href="/login?mode=signup" className="btn btn-landing-primary btn-lg">
               Get started free
             </Link>
-            <a href="#the-problem" className="btn btn-landing-ghost btn-lg">
+            <LandingScrollLink href="#the-problem" className="btn btn-landing-ghost btn-lg">
               Why it matters
-            </a>
+            </LandingScrollLink>
           </div>
         </div>
       </section>
