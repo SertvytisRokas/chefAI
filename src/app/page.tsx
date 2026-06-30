@@ -130,26 +130,6 @@ export default function HomePage() {
             preventable with better planning and smarter cooking.
           </p>
           <FoodWasteCounters />
-          <p className="landing-source-note">
-            No official UN live API exists — counters marked &ldquo;live projection&rdquo;
-            tick from the FAO / UNEP ~1.3B t/year rate (~41 t/s). Hunger figure is
-            static FAO data. &ldquo;Meals lost&rdquo; is a derived illustration.{' '}
-            <a
-              href="https://www.unep.org/resources/publication/food-waste-index-report-2024"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              UNEP 2024
-            </a>
-            {' · '}
-            <a
-              href="https://www.fao.org/publications/sofi/2023/en"
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              FAO SOFI 2023
-            </a>
-          </p>
         </div>
       </section>
 

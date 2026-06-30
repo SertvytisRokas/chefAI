@@ -3,27 +3,39 @@
 import { useEffect, useState } from 'react';
 
 /**
- * Live-style counters projected from published FAO / UNEP annual figures.
- * Click a value to cycle through 4 display scales (default + 3 drill-downs).
+ * Live projections from published FAO / UNEP annual figures.
+ * Sources linked on each card tag.
  */
 
-const TONNES_PER_YEAR = 1_300_000_000;
+const TONNES_PER_YEAR = 1_300_000_000; // UNEP / FAO global food waste estimate
 const SECONDS_PER_YEAR = 365.25 * 24 * 60 * 60;
 const TONNES_PER_SECOND = TONNES_PER_YEAR / SECONDS_PER_YEAR;
 const KG_PER_MEAL = 0.45;
-const HUNGER_COUNT = 735_000_000;
 
-type CounterTier = 'live' | 'official' | 'estimated';
-type DrillLevel = 0 | 1 | 2 | 3;
-type CounterKind = 'mass' | 'count-million' | 'count-billion';
+/**
+ * FAO SOFI 2025: ~673M undernourished in 2024, down ~15M from 733M in 2023.
+ * Linearized: year-start baseline + annual change spread across the year.
+ * @see https://www.fao.org/newsroom/detail/global-hunger-declines--but-rises-in-africa-and-western-asia--un-report/en
+ */
+const HUNGER_YEAR_START = 658_000_000;
+const HUNGER_ANNUAL_CHANGE = -15_000_000;
+const HUNGER_PER_SECOND = HUNGER_ANNUAL_CHANGE / SECONDS_PER_YEAR;
+
+const SOURCES = {
+  unepFoodWaste:
+    'https://www.unep.org/resources/publication/food-waste-index-report-2024',
+  faoFoodLoss:
+    'https://www.fao.org/interactive/state-of-food-loss-and-waste/en/',
+  faoSofi:
+    'https://www.fao.org/newsroom/detail/global-hunger-declines--but-rises-in-africa-and-western-asia--un-report/en',
+} as const;
+
+type CounterTier = 'live' | 'estimated';
 
 const TIER_LABEL: Record<CounterTier, string> = {
   live: 'Live projection',
-  official: 'Official estimate',
   estimated: 'Derived estimate',
 };
-
-const DRILL_HINT = 'Click value to change scale';
 
 function yearStartMs(): number {
   const now = new Date();
@@ -35,70 +47,28 @@ function todayStartMs(): number {
   return new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 }
 
-function nextLevel(level: DrillLevel): DrillLevel {
-  return ((level + 1) % 4) as DrillLevel;
+function formatTonnesFull(tonnes: number): string {
+  return `${Math.floor(tonnes).toLocaleString('en-US')} t`;
 }
 
-/** Tonnes: M t → ×100K t → K t → t / kg if &lt; 1 t */
-function formatMass(tonnes: number, level: DrillLevel): string {
-  const kg = tonnes * 1000;
-
-  if (tonnes < 1) {
-    return `${Math.round(kg).toLocaleString()} kg`;
-  }
-
-  switch (level) {
-    case 0:
-      return `${(tonnes / 1_000_000).toFixed(2)}M t`;
-    case 1:
-      return `${(tonnes / 100_000).toFixed(1)}×100K t`;
-    case 2:
-      return `${(tonnes / 1_000).toFixed(1)}K t`;
-    case 3:
-      return `${Math.round(tonnes).toLocaleString()} t`;
-    default:
-      return `${(tonnes / 1_000_000).toFixed(2)}M t`;
-  }
-}
-
-/** People (M default) or meals (B default): max unit → ×100K → K → raw */
-function formatCount(n: number, level: DrillLevel, kind: 'count-million' | 'count-billion'): string {
-  switch (level) {
-    case 0:
-      if (kind === 'count-billion') {
-        return `${(n / 1_000_000_000).toFixed(2)}B`;
-      }
-      return `${(n / 1_000_000).toFixed(1)}M`;
-    case 1:
-      return `${(n / 100_000).toFixed(1)}×100K`;
-    case 2:
-      return `${(n / 1_000).toFixed(1)}K`;
-    case 3:
-      return Math.round(n).toLocaleString();
-    default:
-      return kind === 'count-billion'
-        ? `${(n / 1_000_000_000).toFixed(2)}B`
-        : `${(n / 1_000_000).toFixed(1)}M`;
-  }
-}
-
-function formatValue(raw: number, kind: CounterKind, level: DrillLevel): string {
-  if (kind === 'mass') return formatMass(raw, level);
-  return formatCount(raw, level, kind);
+function formatMillions(n: number): string {
+  const millions = n / 1_000_000;
+  return `${millions.toLocaleString('en-US', {
+    minimumFractionDigits: 1,
+    maximumFractionDigits: 1,
+  })}M`;
 }
 
 type CounterDef = {
   id: string;
   label: string;
-  raw: number;
-  kind: CounterKind;
-  sub: string;
+  display: string;
   tier: CounterTier;
+  sourceHref: string;
 };
 
 export default function FoodWasteCounters() {
   const [now, setNow] = useState(() => Date.now());
-  const [drillLevels, setDrillLevels] = useState<Record<string, DrillLevel>>({});
 
   useEffect(() => {
     const id = setInterval(() => setNow(Date.now()), 1000);
@@ -110,75 +80,56 @@ export default function FoodWasteCounters() {
 
   const wastedThisYear = yearElapsedSec * TONNES_PER_SECOND;
   const wastedToday = todayElapsedSec * TONNES_PER_SECOND;
+  const hungerCount = HUNGER_YEAR_START + yearElapsedSec * HUNGER_PER_SECOND;
   const mealsFromTodayWaste = (wastedToday * 1000) / KG_PER_MEAL;
 
   const counters: CounterDef[] = [
     {
       id: 'year-waste',
       label: 'Food wasted this year',
-      raw: wastedThisYear,
-      kind: 'mass',
-      sub: '1.3B t/year rate (FAO / UNEP)',
+      display: formatTonnesFull(wastedThisYear),
       tier: 'live',
+      sourceHref: SOURCES.unepFoodWaste,
     },
     {
       id: 'today-waste',
       label: 'Food wasted today',
-      raw: wastedToday,
-      kind: 'mass',
-      sub: '~41 tonnes per second globally',
+      display: formatTonnesFull(wastedToday),
       tier: 'live',
+      sourceHref: SOURCES.faoFoodLoss,
     },
     {
       id: 'hunger',
       label: 'People facing hunger',
-      raw: HUNGER_COUNT,
-      kind: 'count-million',
-      sub: 'FAO SOFI 2023 (2022 data)',
-      tier: 'official',
+      display: formatMillions(hungerCount),
+      tier: 'live',
+      sourceHref: SOURCES.faoSofi,
     },
     {
       id: 'meals',
       label: 'Meals lost from today\u2019s waste',
-      raw: mealsFromTodayWaste,
-      kind: 'count-billion',
-      sub: 'At ~450 g per meal — illustrative',
+      display: formatMillions(mealsFromTodayWaste),
       tier: 'estimated',
+      sourceHref: SOURCES.unepFoodWaste,
     },
   ];
 
-  const cycleDrill = (id: string) => {
-    setDrillLevels((prev) => ({
-      ...prev,
-      [id]: nextLevel(prev[id] ?? 0),
-    }));
-  };
-
   return (
     <div className="waste-counters">
-      {counters.map((c) => {
-        const level = drillLevels[c.id] ?? 0;
-        const display = formatValue(c.raw, c.kind, level);
-
-        return (
-          <div key={c.id} className="waste-counter-card">
-            <p className="waste-counter-label">{c.label}</p>
-            <button
-              type="button"
-              className="waste-counter-value"
-              onClick={() => cycleDrill(c.id)}
-              title={DRILL_HINT}
-              aria-label={`${c.label}: ${display}. ${DRILL_HINT}`}
-            >
-              {display}
-            </button>
-            <span className={`waste-counter-tier waste-counter-tier--${c.tier}`}>
-              {TIER_LABEL[c.tier]}
-            </span>
-            <p className="waste-counter-sub">{c.sub}</p>
-          </div>
-        );
-      })}
+      {counters.map((c) => (
+        <div key={c.id} className="waste-counter-card">
+          <p className="waste-counter-label">{c.label}</p>
+          <p className="waste-counter-value">{c.display}</p>
+          <a
+            href={c.sourceHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={`waste-counter-tier waste-counter-tier--${c.tier}`}
+          >
+            {TIER_LABEL[c.tier]}
+          </a>
+        </div>
+      ))}
     </div>
   );
 }

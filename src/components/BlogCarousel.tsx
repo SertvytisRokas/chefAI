@@ -86,7 +86,9 @@ export default function BlogCarousel({ posts }: { posts: BlogPost[] }) {
         <div className="blog-carousel-window">
           <div
             className="blog-carousel-track"
-            style={{ transform: `translateX(-${page * 100}%)` }}
+            style={{
+              transform: `translateX(calc(-${page} * (100cqw + var(--blog-carousel-gap))))`,
+            }}
           >
             {pages.map((slidePosts, slideIdx) => (
               <div key={slideIdx} className="blog-carousel-slide">
