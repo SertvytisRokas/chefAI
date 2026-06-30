@@ -10,28 +10,32 @@ import {
   setAuthNavListener,
   type AuthMode,
 } from '../../lib/authNav';
+import { getSiteUrl } from '../../lib/siteUrl';
 
 type SignupStep = 'email' | 'password' | 'verify';
 
 type PasswordChecks = {
   length: boolean;
   letter: boolean;
-  numberOrSpecial: boolean;
+  number: boolean;
+  special: boolean;
 };
 
 const OTP_LENGTH = 6;
 const RESEND_COOLDOWN_SEC = 60;
+const SPECIAL_CHAR_RE = /[#?!&@$%^*()_+\-=[\]{};':"\\|,.<>/~`]/;
 
 function checkPassword(pw: string): PasswordChecks {
   return {
     length: pw.length >= 10,
     letter: /[a-zA-Z]/.test(pw),
-    numberOrSpecial: /[0-9#?!&@$%^*()_+\-=[\]{};':"\\|,.<>/~`]/.test(pw),
+    number: /[0-9]/.test(pw),
+    special: SPECIAL_CHAR_RE.test(pw),
   };
 }
 
 function allChecksPass(checks: PasswordChecks): boolean {
-  return checks.length && checks.letter && checks.numberOrSpecial;
+  return checks.length && checks.letter && checks.number && checks.special;
 }
 
 function slideIndex(mode: 'login' | 'signup', signupStep: SignupStep): number {
@@ -52,6 +56,21 @@ function sanitizeOtp(value: string): string {
 function authErrorMessage(err: unknown): string {
   if (err instanceof Error && err.message) return err.message;
   return 'Something went wrong. Please try again.';
+}
+
+function isDuplicateSignup(
+  data: { user: { identities?: unknown[] } | null },
+  error: { message?: string; code?: string } | null
+): boolean {
+  if (data.user && (data.user.identities?.length ?? 0) === 0) return true;
+  if (!error) return false;
+  const msg = (error.message ?? '').toLowerCase();
+  return (
+    msg.includes('already registered') ||
+    msg.includes('already exists') ||
+    error.code === 'user_already_exists' ||
+    error.code === 'email_exists'
+  );
 }
 
 function AuthBrand() {
@@ -87,12 +106,27 @@ function EyeIcon({ off }: { off: boolean }) {
   );
 }
 
-function AuthError({ message }: { message: string | null }) {
+function AuthError({
+  message,
+  suggestLogin,
+  onLogin,
+}: {
+  message: string | null;
+  suggestLogin?: boolean;
+  onLogin?: () => void;
+}) {
   if (!message) return null;
   return (
-    <p className="auth-error" role="alert">
-      {message}
-    </p>
+    <div className="auth-error-block" role="alert">
+      <p className="auth-error">{message}</p>
+      {suggestLogin && onLogin && (
+        <p className="auth-error-action">
+          <button type="button" className="auth-link" onClick={onLogin}>
+            Log in instead
+          </button>
+        </p>
+      )}
+    </div>
   );
 }
 
@@ -116,6 +150,7 @@ export default function LoginForm() {
   const [resendLoading, setResendLoading] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [suggestLogin, setSuggestLogin] = useState(false);
   const resendIntervalRef = useRef<number | null>(null);
 
   const passwordChecks = checkPassword(password);
@@ -125,6 +160,7 @@ export default function LoginForm() {
 
   const clearError = useCallback(() => {
     setAuthError(null);
+    setSuggestLogin(false);
   }, []);
 
   const startResendCooldown = useCallback(() => {
@@ -238,11 +274,20 @@ export default function LoginForm() {
       const { data, error } = await supabase.auth.signUp({
         email: normalizedEmail,
         password,
+        options: {
+          emailRedirectTo: `${getSiteUrl()}/auth/callback`,
+        },
       });
       if (error) throw error;
 
+      if (isDuplicateSignup(data, error)) {
+        setAuthError('An account with this email already exists.');
+        setSuggestLogin(true);
+        return;
+      }
+
       if (data.session) {
-        router.replace('/profile');
+        router.replace('/fridge');
         return;
       }
 
@@ -283,7 +328,7 @@ export default function LoginForm() {
       });
       if (error) throw error;
       if (data.session) {
-        router.replace('/profile');
+        router.replace('/fridge');
       } else {
         setAuthError('Confirmation succeeded but no session was created. Try logging in.');
       }
@@ -341,7 +386,9 @@ export default function LoginForm() {
         <div className="auth-slider-viewport" aria-live="polite">
           <div
             className="auth-slider-track"
-            style={{ transform: `translateX(calc(-${activeIndex} * 100cqw))` }}
+            style={{
+              transform: `translateX(calc(-${activeIndex} * (100cqw + var(--auth-slider-gap))))`,
+            }}
           >
             {/* Log in */}
             <div className="auth-slider-panel" aria-hidden={mode !== 'login'}>
@@ -514,11 +561,17 @@ export default function LoginForm() {
                     </span>
                     1 letter
                   </li>
-                  <li className={passwordChecks.numberOrSpecial ? 'met' : ''}>
+                  <li className={passwordChecks.number ? 'met' : ''}>
                     <span className="auth-req-mark" aria-hidden="true">
-                      {passwordChecks.numberOrSpecial ? '✓' : '○'}
+                      {passwordChecks.number ? '✓' : '○'}
                     </span>
-                    1 number or special character (example: # ? ! &amp;)
+                    1 number
+                  </li>
+                  <li className={passwordChecks.special ? 'met' : ''}>
+                    <span className="auth-req-mark" aria-hidden="true">
+                      {passwordChecks.special ? '✓' : '○'}
+                    </span>
+                    1 special character (example: # ? ! &amp;)
                   </li>
                   <li className={passwordChecks.length ? 'met' : ''}>
                     <span className="auth-req-mark" aria-hidden="true">
@@ -527,7 +580,11 @@ export default function LoginForm() {
                     10 characters
                   </li>
                 </ul>
-                <AuthError message={mode === 'signup' && signupStep === 'password' ? authError : null} />
+                <AuthError
+                  message={mode === 'signup' && signupStep === 'password' ? authError : null}
+                  suggestLogin={suggestLogin}
+                  onLogin={() => switchMode('login')}
+                />
                 <button
                   type="submit"
                   disabled={busy || !passwordValid}
@@ -560,6 +617,7 @@ export default function LoginForm() {
               <p className="auth-hint">
                 We sent a {OTP_LENGTH}-digit code to{' '}
                 <span className="auth-hint-email">{normalizeEmail(email) || 'your email'}</span>.
+                You can enter it below, or use the confirmation link in the same email.
               </p>
               <form onSubmit={handleVerify} className="auth-fields" noValidate>
                 <label className="auth-label" htmlFor="signup-code">

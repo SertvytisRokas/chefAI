@@ -13,7 +13,10 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const user = useUser();
   const isLanding = pathname === '/';
-  const showSideNav = Boolean(user) && pathname !== '/login';
+  const showSideNav =
+    Boolean(user) &&
+    pathname !== '/login' &&
+    !pathname.startsWith('/auth/');
 
   return (
     <div className="app">

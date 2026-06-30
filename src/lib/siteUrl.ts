@@ -1,0 +1,5 @@
+/** Canonical site origin for auth redirects (client or server). */
+export function getSiteUrl(): string {
+  if (typeof window !== 'undefined') return window.location.origin;
+  return process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+}

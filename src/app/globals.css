@@ -482,11 +482,13 @@ main.page {
   overflow: hidden;
   width: 100%;
   container-type: inline-size;
+  --auth-slider-gap: 2rem;
 }
 
 .auth-slider-track {
   display: flex;
-  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  gap: var(--auth-slider-gap);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   will-change: transform;
 }
 
@@ -516,6 +518,16 @@ main.page {
   word-break: break-all;
 }
 
+.auth-hint--confirmed {
+  margin: -0.5rem 0 1.75rem;
+}
+
+.auth-confirmed .btn-auth-submit {
+  margin-top: 0;
+  text-align: center;
+  text-decoration: none;
+}
+
 .auth-input--code {
   text-align: center;
   letter-spacing: 0.35em;
@@ -530,6 +542,19 @@ main.page {
   font-size: 0.88rem;
   line-height: 1.45;
   color: var(--error-color);
+  text-align: center;
+}
+
+.auth-error-block {
+  margin-top: 0.85rem;
+}
+
+.auth-error-block .auth-error {
+  margin: 0;
+}
+
+.auth-error-action {
+  margin: 0.5rem 0 0;
   text-align: center;
 }
 
