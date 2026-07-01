@@ -10,12 +10,7 @@ interface ModalProps {
 }
 
 /**
- * A reusable modal component that renders its children in a
- * centred overlay. The modal uses the dark theme colours defined in
- * globals.css. When `open` is false, nothing is rendered. The
- * `onClose` callback is called when the user clicks the close
- * button or outside the modal content. You can pass an optional
- * `title` to display a header.
+ * Centred overlay modal — dark theme, rounded panel.
  */
 export default function Modal({ open, onClose, title, children }: ModalProps) {
   if (!open) return null;
@@ -24,13 +19,19 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       <div
         className="modal-content"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={title ? 'modal-title' : undefined}
       >
         <div className="modal-header">
-          <h2 style={{ fontSize: '1.25rem', margin: 0 }}>{title}</h2>
-          <button
-            onClick={onClose}
-            style={{ background: 'none', border: 'none', color: 'var(--muted-text-color)', fontSize: '1.2rem' }}
-          >
+          {title ? (
+            <h2 id="modal-title" className="modal-title">
+              {title}
+            </h2>
+          ) : (
+            <span />
+          )}
+          <button type="button" className="modal-close" onClick={onClose} aria-label="Close">
             ✕
           </button>
         </div>

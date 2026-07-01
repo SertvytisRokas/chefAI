@@ -102,82 +102,65 @@ export default function ShoppingPage() {
 
   if (!user) {
     return (
-      <div className="mt-8">
-        <p>
+      <div className="app-page">
+        <p className="page-lead">
           Please <a href="/login">log in</a> to view your shopping list.
         </p>
       </div>
     );
   }
   return (
-    <div className="mt-8" style={{ maxWidth: '600px' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-        Shopping List
-      </h1>
-      {message && (
-        <p style={{ color: 'var(--success-color)', marginBottom: '1rem' }}>{message}</p>
-      )}
+    <div className="app-page">
+      <h1 className="page-title">Shopping list</h1>
+      <p className="page-lead">Items to buy — mark purchased to move them into your fridge.</p>
+      {message && <p className="app-message app-message--success">{message}</p>}
       {loading ? (
-        <p>Loading…</p>
+        <p className="app-list-empty">Loading…</p>
       ) : items.length === 0 ? (
-        <p>Your shopping list is empty.</p>
+        <p className="app-empty">Your shopping list is empty.</p>
       ) : (
         <div className="space-y-4">
           {items.map((item) => (
-            <div
-              key={item.id}
-              style={{
-                padding: '0.75rem',
-                backgroundColor: 'var(--surface-color)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '6px'
-              }}
-            >
-              <strong>{item.name}</strong>: {item.quantity} {getMeasurementName(item.measurement_type_id)}
-              <div style={{ marginTop: '0.5rem' }}>
-                <button
-                  className="btn"
-                  style={{ marginRight: '0.5rem' }}
-                  onClick={() => openPurchaseModal(item)}
-                >
-                  Purchased
-                </button>
-                <button className="btn" onClick={() => handleDelete(item.id)}>
-                  Delete
-                </button>
+            <div key={item.id} className="app-card">
+              <div className="app-card-row">
+                <div>
+                  <strong>{item.name}</strong>
+                  <span className="text-muted">
+                    {' '}
+                    · {item.quantity} {getMeasurementName(item.measurement_type_id)}
+                  </span>
+                </div>
+                <div className="app-card-actions">
+                  <button type="button" className="btn btn-sm" onClick={() => openPurchaseModal(item)}>
+                    Purchased
+                  </button>
+                  <button type="button" className="btn-text-danger" onClick={() => handleDelete(item.id)}>
+                    Delete
+                  </button>
+                </div>
               </div>
             </div>
           ))}
-          {/* Purchase modal */}
           <Modal
             open={purchaseItem !== null}
             onClose={cancelPurchase}
             title={purchaseItem ? `Add ${purchaseItem.name} to fridge` : ''}
           >
             {purchaseItem && (
-              <div>
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem' }}>
-                    Quantity
-                  </label>
+              <div className="app-modal-fields">
+                <div className="app-field">
+                  <label className="app-label">Quantity</label>
                   <input
                     type="number"
                     min={0}
                     step="0.1"
                     value={purchaseQty}
                     onChange={(e) => setPurchaseQty(parseFloat(e.target.value))}
-                    style={{ width: '100%' }}
                   />
                 </div>
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem' }}>
-                    Measurement Unit
-                  </label>
-                  <select
-                    value={purchaseUnit}
-                    onChange={(e) => setPurchaseUnit(e.target.value)}
-                    style={{ width: '100%' }}
-                  >
+                <div className="app-field">
+                  <label className="app-label">Measurement unit</label>
+                  <select value={purchaseUnit} onChange={(e) => setPurchaseUnit(e.target.value)}>
                     {measurementTypes.map((mt) => (
                       <option key={mt.id} value={mt.name}>
                         {mt.name}
@@ -185,23 +168,20 @@ export default function ShoppingPage() {
                     ))}
                   </select>
                 </div>
-                <div style={{ marginBottom: '0.75rem' }}>
-                  <label style={{ display: 'block', marginBottom: '0.25rem' }}>
-                    Expiration Date (optional)
-                  </label>
+                <div className="app-field">
+                  <label className="app-label">Expiration date (optional)</label>
                   <input
                     type="date"
                     value={purchaseExp}
                     onChange={(e) => setPurchaseExp(e.target.value)}
-                    style={{ width: '100%' }}
                   />
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                  <button className="btn" onClick={cancelPurchase}>
+                <div className="app-actions-row">
+                  <button type="button" className="btn-ghost" onClick={cancelPurchase}>
                     Cancel
                   </button>
-                  <button className="btn" onClick={confirmPurchase}>
-                    Add to Fridge
+                  <button type="button" className="btn" onClick={confirmPurchase}>
+                    Add to fridge
                   </button>
                 </div>
               </div>

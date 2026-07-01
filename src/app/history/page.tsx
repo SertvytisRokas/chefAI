@@ -166,41 +166,34 @@ export default function HistoryPage() {
 
   if (!user) {
     return (
-      <div className="mt-8">
-        <p>
+      <div className="app-page">
+        <p className="page-lead">
           Please <a href="/login">log in</a> to view your recipe history.
         </p>
       </div>
     );
   }
   return (
-    <div className="mt-8" style={{ maxWidth: '900px' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-        Recipe History
-      </h1>
-      {message && (
-        <p style={{ color: 'var(--success-color)', marginBottom: '1rem' }}>{message}</p>
-      )}
+    <div className="app-page">
+      <h1 className="page-title">Recipe history</h1>
+      <p className="page-lead">Browse, filter, and revisit recipes you&apos;ve cooked.</p>
+      {message && <p className="app-message app-message--success">{message}</p>}
       {loading ? (
-        <p>Loading…</p>
+        <p className="app-list-empty">Loading…</p>
       ) : (
         <>
-          {/* Search and filter controls */}
-          <div
-            style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}
-          >
-            <div>
-              <label style={{ display: 'block' }}>Search</label>
+          <div className="app-toolbar">
+            <div className="app-field app-field--inline">
+              <label className="app-label">Search</label>
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder="Search by title"
-                style={{ width: '160px' }}
               />
             </div>
-            <div>
-              <label style={{ display: 'block' }}>Filter by Rating</label>
+            <div className="app-field app-field--inline">
+              <label className="app-label">Filter by rating</label>
               <select
                 value={filterRating}
                 onChange={(e) => {
@@ -217,8 +210,8 @@ export default function HistoryPage() {
                 <option value="5">5⭐</option>
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block' }}>Filter by Meal</label>
+            <div className="app-field app-field--inline">
+              <label className="app-label">Filter by meal</label>
               <select
                 value={filterMeal}
                 onChange={(e) => {
@@ -234,8 +227,8 @@ export default function HistoryPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <label style={{ display: 'block' }}>Filter by Diet</label>
+            <div className="app-field app-field--inline">
+              <label className="app-label">Filter by diet</label>
               <select
                 value={filterDiet}
                 onChange={(e) => {
@@ -251,80 +244,53 @@ export default function HistoryPage() {
                 ))}
               </select>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center' }}>
+            <div className="app-checkbox-row">
               <input
                 type="checkbox"
                 id="favouritesOnly"
                 checked={showFavoritesOnly}
                 onChange={(e) => setShowFavoritesOnly(e.target.checked)}
               />
-              <label htmlFor="favouritesOnly" style={{ marginLeft: '0.5rem' }}>
+              <label htmlFor="favouritesOnly" className="app-label">
                 Favourites only
               </label>
             </div>
           </div>
-          {/* Recipes table */}
           {sorted.length === 0 ? (
-            <p>No recipes match your filters.</p>
+            <p className="app-empty">No recipes match your filters.</p>
           ) : (
-            <div style={{ overflowX: 'auto' }}>
-              <table
-                style={{ width: '100%', borderCollapse: 'collapse', minWidth: '600px' }}
-              >
+            <div className="app-table-wrap app-table-clickable">
+              <table>
                 <thead>
-                  <tr style={{ backgroundColor: 'var(--surface-color)' }}>
-                    <th
-                      style={{ cursor: 'pointer', padding: '0.5rem', textAlign: 'left' }}
-                      onClick={() => handleSort('title')}
-                    >
+                  <tr>
+                    <th className="sortable" onClick={() => handleSort('title')}>
                       Name {sortKey === 'title' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
                     </th>
-                    <th
-                      style={{ cursor: 'pointer', padding: '0.5rem', textAlign: 'left' }}
-                      onClick={() => handleSort('rating')}
-                    >
+                    <th className="sortable" onClick={() => handleSort('rating')}>
                       Rating {sortKey === 'rating' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
                     </th>
-                    <th
-                      style={{ cursor: 'pointer', padding: '0.5rem', textAlign: 'left' }}
-                      onClick={() => handleSort('created_at')}
-                    >
+                    <th className="sortable" onClick={() => handleSort('created_at')}>
                       Generated {sortKey === 'created_at' ? (sortOrder === 'asc' ? '▲' : '▼') : ''}
                     </th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Meal Type</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Diet</th>
-                    <th style={{ padding: '0.5rem', textAlign: 'left' }}>Favourite</th>
+                    <th>Meal type</th>
+                    <th>Diet</th>
+                    <th>Favourite</th>
                   </tr>
                 </thead>
                 <tbody>
                   {sorted.map((rec) => (
-                    <tr
-                      key={rec.id}
-                      style={{ borderBottom: '1px solid var(--border-color)', cursor: 'pointer' }}
-                      onClick={() => setSelectedRecipe(rec)}
-                    >
-                      <td style={{ padding: '0.5rem' }}>{rec.title}</td>
-                      <td style={{ padding: '0.5rem' }}>
-                        {rec.rating ? `${rec.rating}⭐` : '-'}
-                      </td>
-                      <td style={{ padding: '0.5rem' }}>
-                        {new Date(rec.created_at).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: '0.5rem' }}>
-                        {rec.meal_types?.name ?? '-'}
-                      </td>
-                      <td style={{ padding: '0.5rem' }}>
-                        {rec.diet_types?.name ?? '-'}
-                      </td>
-                      <td style={{ padding: '0.5rem' }} onClick={(e) => e.stopPropagation()}>
+                    <tr key={rec.id} onClick={() => setSelectedRecipe(rec)}>
+                      <td>{rec.title}</td>
+                      <td>{rec.rating ? `${rec.rating}⭐` : '-'}</td>
+                      <td>{new Date(rec.created_at).toLocaleDateString()}</td>
+                      <td>{rec.meal_types?.name ?? '-'}</td>
+                      <td>{rec.diet_types?.name ?? '-'}</td>
+                      <td onClick={(e) => e.stopPropagation()}>
                         <button
-                          className="btn"
-                          style={{
-                            padding: '0.25rem 0.5rem',
-                            backgroundColor: rec.favorite ? 'var(--accent-color)' : 'var(--surface-color)',
-                            color: rec.favorite ? 'var(--background-color)' : 'var(--text-color)'
-                          }}
+                          type="button"
+                          className={`btn app-fav-btn${rec.favorite ? ' is-active' : ''}`}
                           onClick={() => toggleFavorite(rec)}
+                          aria-label={rec.favorite ? 'Remove from favourites' : 'Add to favourites'}
                         >
                           {rec.favorite ? '★' : '☆'}
                         </button>
@@ -343,29 +309,27 @@ export default function HistoryPage() {
           >
             {selectedRecipe ? (
               <div>
-                <p style={{ marginBottom: '0.5rem' }}>
+                <p className="modal-recipe-meta">
                   Generated on {new Date(selectedRecipe.created_at).toLocaleDateString()}
                 </p>
                 {selectedRecipe.rating && (
-                  <p style={{ marginBottom: '0.5rem' }}>Rating: {selectedRecipe.rating}⭐</p>
+                  <p className="modal-recipe-meta">Rating: {selectedRecipe.rating}⭐</p>
                 )}
                 {selectedRecipe.feedback && (
-                  <p style={{ marginBottom: '0.5rem' }}>Your comment: {selectedRecipe.feedback}</p>
+                  <p className="modal-recipe-meta">Your comment: {selectedRecipe.feedback}</p>
                 )}
-                <h3 style={{ marginTop: '0.5rem' }}>Ingredients</h3>
-                <ul style={{ paddingLeft: '1.25rem', marginBottom: '0.5rem' }}>
+                <h3 className="app-detail-subtitle">Ingredients</h3>
+                <ul className="app-ingredient-list">
                   {selectedRecipe.ingredients?.map((ing, idx) => (
                     <li key={idx}>
                       {ing.quantity} {ing.name}
                     </li>
                   ))}
                 </ul>
-                <h3 style={{ marginTop: '0.5rem' }}>Steps</h3>
-                <ol style={{ paddingLeft: '1.25rem' }}>
+                <h3 className="app-detail-subtitle">Steps</h3>
+                <ol className="app-step-list">
                   {selectedRecipe.steps?.map((step, idx) => (
-                    <li key={idx} style={{ marginBottom: '0.25rem' }}>
-                      {step}
-                    </li>
+                    <li key={idx}>{step}</li>
                   ))}
                 </ol>
               </div>

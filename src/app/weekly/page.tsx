@@ -690,36 +690,31 @@ export default function WeeklyPlanPage() {
   }
 
   return (
-    <div className="mt-8">
+    <div className="app-page">
       {!user ? (
-        <p className="mt-4">
+        <p className="page-lead">
           Please <a href="/login">log in</a> to generate a weekly plan.
         </p>
       ) : (
         <>
-          <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-            Weekly Meal Planner
-          </h1>
-          {error && (
-            <p style={{ color: 'var(--error-color)', marginBottom: '1rem' }}>{error}</p>
-          )}
-          <div style={{ marginBottom: '1rem', maxWidth: '500px' }}>
-            <label style={{ display: 'block', marginBottom: '0.5rem' }}>
+          <h1 className="page-title">Weekly plan</h1>
+          <p className="page-lead">Plan your week and keep shopping in sync with your fridge.</p>
+          {error && <p className="app-message app-message--error">{error}</p>}
+          <div className="app-section app-section--medium app-section--mb">
+            <label className="app-checkbox-row">
               <input
                 type="checkbox"
                 checked={suggestMode}
                 onChange={(e) => {
-                  // Changing suggestMode does not affect the current
-                  // plan. It only influences the next generation.
                   setSuggestMode(e.target.checked);
                 }}
-                // Disable toggling while loading to prevent confusion
                 disabled={loading}
               />
-              <span style={{ marginLeft: '0.5rem' }}>
+              <span>
                 Suggest recipes with missing ingredients (enables shopping list)
               </span>
             </label>
+            <div className="app-card-actions mt-4">
             <button
               onClick={handleGenerate}
               disabled={loading || fridgeItems.length === 0}
@@ -740,74 +735,54 @@ export default function WeeklyPlanPage() {
               return missingCount > 0 ? (
                 <button
                   onClick={handleAddAllMissing}
-                  className="btn"
-                  style={{ marginLeft: '0.5rem' }}
+                  className="btn btn-ghost"
                 >
                   Add All Missing Ingredients
                 </button>
               ) : null;
             })()}
+            </div>
           </div>
           {plan && (
-            <div
-              style={{
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: '1rem'
-              }}
-            >
+            <div className="app-day-grid">
               {plan.week.map((dayPlan: any, dayIdx: number) => (
                 <div
                   key={dayIdx}
-                  style={{
-                    flexBasis: '30%',
-                    backgroundColor: 'var(--surface-color)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: '6px',
-                    padding: '0.75rem',
-                    minWidth: '280px'
-                  }}
+                  className="app-card app-card--day"
                 >
-                  <h2
-                    style={{ fontSize: '1.2rem', fontWeight: 600, marginBottom: '0.5rem' }}
-                  >
+                  <h2 className="app-detail-title app-detail-title--sm">
                     {(dayPlan as any).day}
                   </h2>
                   {(dayPlan as any).meals.map((meal: any, mealIdx: number) => (
                     <div
                       key={mealIdx}
-                      style={{
-                        marginBottom: '0.75rem',
-                        padding: '0.5rem',
-                        border: '1px solid var(--border-color)',
-                        borderRadius: '4px'
-                      }}
+                      className={`app-recipe-card${
+                        plan?.suggest && meal.missing?.length ? ' app-recipe-card--missing' : ''
+                      }`}
                     >
-                      <h3 style={{ fontWeight: 500, marginBottom: '0.25rem' }}>
+                      <h3 className="app-detail-subtitle app-detail-subtitle--flush">
                         {meal.mealType}: {meal.title}
                       </h3>
-                      <ul style={{ paddingLeft: '1.25rem', marginBottom: '0.5rem' }}>
+                      <ul className="app-ingredient-list">
                         {meal.ingredients.map((ing: any, idx: number) => {
                           // Highlight missing only if the plan was generated in suggest mode
                           const highlightMissing = plan && plan.suggest;
                           const isMissing = highlightMissing && meal.missing && (meal.missing as any[]).some((m) => m.name.toLowerCase() === ing.name.toLowerCase());
                           return (
-                            <li key={idx} style={{ color: isMissing ? 'var(--error-color)' : undefined }}>
+                            <li key={idx} className={isMissing ? 'text-danger' : undefined}>
                               {ing.quantity} {ing.name}
                             </li>
                           );
                         })}
                       </ul>
-                      <ol style={{ paddingLeft: '1.25rem' }}>
+                      <ol className="app-step-list">
                         {meal.steps.map((step: string, idx: number) => (
-                          <li key={idx} style={{ marginBottom: '0.25rem' }}>
-                            {step}
-                          </li>
+                          <li key={idx}>{step}</li>
                         ))}
                       </ol>
                       {/* If this recipe existed previously, show info */}
                       {meal.existingInfo && (
-                        <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: 'var(--muted-text-color)' }}>
+                        <div className="app-recipe-meta">
                           You already used this recipe on{' '}
                           {new Date(meal.existingInfo.created_at).toLocaleDateString()} for{' '}
                           {mealTypes.find((t) => t.id === meal.existingInfo.meal_type_id)?.name || 'this meal'}.{' '}
@@ -820,9 +795,9 @@ export default function WeeklyPlanPage() {
                         </div>
                       )}
                       {plan && plan.suggest && meal.missing && (meal.missing as any[]).length > 0 && (
-                        <div style={{ marginTop: '0.5rem' }}>
-                          <h4 style={{ marginBottom: '0.25rem' }}>Missing:</h4>
-                          <ul style={{ paddingLeft: '1.25rem', marginBottom: '0.5rem' }}>
+                        <div className="app-subsection">
+                          <h4 className="app-subsection-title">Missing</h4>
+                          <ul className="app-ingredient-list mb-2">
                             {(meal.missing as any[]).map((m: any, idx: number) => (
                               <li key={idx}>
                                 {m.quantity} {m.unit} {m.name}
@@ -830,7 +805,7 @@ export default function WeeklyPlanPage() {
                             ))}
                           </ul>
                           <button
-                            className="btn"
+                            className="btn btn-sm"
                             onClick={() => {
                               // Add this meal's missing items to shopping list
                               handleAddMealMissing(dayIdx, mealIdx);
@@ -841,128 +816,73 @@ export default function WeeklyPlanPage() {
                           </button>
                         </div>
                       )}
-      {/* Modal for adding all missing ingredients */}
-      <Modal
-        open={showMissingModal}
-        onClose={cancelAddAllMissing}
-        title="Add Missing Ingredients"
-      >
-        <p style={{ marginBottom: '0.5rem' }}>
-          Review the missing ingredients below. You can adjust quantities or remove items before adding them to your shopping list.
-        </p>
-        {editMissingItems.length === 0 ? (
-          <p>No missing ingredients.</p>
-        ) : (
-          <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
-            {editMissingItems.map((itm, idx) => (
-              <div
-                key={idx}
-                style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}
-              >
-                <span style={{ flex: 1 }}>{itm.name}</span>
-                <input
-                  type="number"
-                  min={0}
-                  step="0.1"
-                  value={itm.quantity}
-                  onChange={(e) => {
-                    const val = parseFloat(e.target.value);
-                    setEditMissingItems((prev) => {
-                      const copy = [...prev];
-                      copy[idx] = { ...copy[idx], quantity: isNaN(val) ? 0 : val };
-                      return copy;
-                    });
-                  }}
-                  style={{ width: '80px', marginRight: '0.5rem' }}
-                />
-                <span style={{ marginRight: '0.5rem' }}>{itm.unit}</span>
-                <button
-                  className="btn"
-                  style={{ backgroundColor: 'var(--error-color)' }}
-                  onClick={() => {
-                    setEditMissingItems((prev) => prev.filter((_, i) => i !== idx));
-                  }}
-                >
-                  ×
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-        <div style={{ marginTop: '0.75rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-          <button className="btn" onClick={cancelAddAllMissing}>
-            Cancel
-          </button>
-          <button className="btn" onClick={confirmAddAllMissing} disabled={editMissingItems.length === 0}>
-            Add to Shopping List
-          </button>
-        </div>
-      </Modal>
-                      <div style={{ marginTop: '0.5rem' }}>
+                      <div className="app-subsection">
                         <button
-                          className="btn"
+                          className="btn btn-sm"
                           onClick={() => handleRegenerateMeal(dayIdx, mealIdx)}
-                          style={{ marginRight: '0.5rem' }}
                         >
                           Regenerate
                         </button>
                         {meal.id && (
-                          <>
-                            <label style={{ marginRight: '0.5rem' }}>Rating:</label>
-                            <select
-                              value={meal.rating ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                setPlan((prev: any) => {
-                                  if (!prev) return prev;
-                                  const updated = JSON.parse(JSON.stringify(prev)) as any;
-                                  updated.week[dayIdx].meals[mealIdx].rating = value ? parseInt(value) : null;
-                                  return updated;
-                                });
-                              }}
-                              style={{ marginRight: '0.5rem' }}
-                            >
-                              <option value="">--</option>
-                              {[1, 2, 3, 4, 5].map((n) => (
-                                <option key={n} value={n}>
-                                  {n}⭐
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              className="btn"
-                              onClick={async () => {
-                                // Save feedback for this meal
-                                const ratingVal = meal.rating || null;
-                                const feedbackVal = meal.feedback || null;
-                                const { error: updErr } = await supabase
-                                  .from('recipes')
-                                  .update({ rating: ratingVal, feedback: feedbackVal })
-                                  .eq('id', meal.id);
-                                if (updErr) {
-                                  setError(updErr.message || 'Failed to save feedback');
-                                } else {
-                                  setError('Feedback saved!');
-                                }
-                              }}
-                            >
-                              Save Feedback
-                            </button>
-                            <textarea
-                              value={meal.feedback ?? ''}
-                              onChange={(e) => {
-                                const value = e.target.value;
-                                setPlan((prev: any) => {
-                                  if (!prev) return prev;
-                                  const updated = JSON.parse(JSON.stringify(prev)) as any;
-                                  updated.week[dayIdx].meals[mealIdx].feedback = value;
-                                  return updated;
-                                });
-                              }}
-                              rows={3}
-                              style={{ width: '100%', marginTop: '0.25rem', resize: 'vertical' }}
-                            />
-                          </>
+                          <div className="app-feedback">
+                            <div className="app-feedback-row mt-2">
+                              <label className="app-label">Rating</label>
+                              <select
+                                value={meal.rating ?? ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setPlan((prev: any) => {
+                                    if (!prev) return prev;
+                                    const updated = JSON.parse(JSON.stringify(prev)) as any;
+                                    updated.week[dayIdx].meals[mealIdx].rating = value ? parseInt(value) : null;
+                                    return updated;
+                                  });
+                                }}
+                              >
+                                <option value="">--</option>
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <option key={n} value={n}>
+                                    {n}⭐
+                                  </option>
+                                ))}
+                              </select>
+                              <button
+                                className="btn btn-sm"
+                                onClick={async () => {
+                                  // Save feedback for this meal
+                                  const ratingVal = meal.rating || null;
+                                  const feedbackVal = meal.feedback || null;
+                                  const { error: updErr } = await supabase
+                                    .from('recipes')
+                                    .update({ rating: ratingVal, feedback: feedbackVal })
+                                    .eq('id', meal.id);
+                                  if (updErr) {
+                                    setError(updErr.message || 'Failed to save feedback');
+                                  } else {
+                                    setError('Feedback saved!');
+                                  }
+                                }}
+                              >
+                                Save feedback
+                              </button>
+                            </div>
+                            <div className="app-field">
+                              <label className="app-label">Comment</label>
+                              <textarea
+                                value={meal.feedback ?? ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setPlan((prev: any) => {
+                                    if (!prev) return prev;
+                                    const updated = JSON.parse(JSON.stringify(prev)) as any;
+                                    updated.week[dayIdx].meals[mealIdx].feedback = value;
+                                    return updated;
+                                  });
+                                }}
+                                rows={3}
+                              />
+                            </div>
+                          </div>
                         )}
                       </div>
                     </div>
@@ -971,6 +891,60 @@ export default function WeeklyPlanPage() {
               ))}
             </div>
           )}
+          <Modal
+            open={showMissingModal}
+            onClose={cancelAddAllMissing}
+            title="Add Missing Ingredients"
+          >
+            <p className="app-modal-intro">
+              Review the missing ingredients below. You can adjust quantities or remove items before adding them to your shopping list.
+            </p>
+            {editMissingItems.length === 0 ? (
+              <p className="app-list-empty">No missing ingredients.</p>
+            ) : (
+              <div className="app-modal-scroll">
+                {editMissingItems.map((itm, idx) => (
+                  <div key={idx} className="app-modal-item">
+                    <span className="app-modal-item-name">{itm.name}</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="0.1"
+                      className="app-input-xs"
+                      value={itm.quantity}
+                      onChange={(e) => {
+                        const val = parseFloat(e.target.value);
+                        setEditMissingItems((prev) => {
+                          const copy = [...prev];
+                          copy[idx] = { ...copy[idx], quantity: isNaN(val) ? 0 : val };
+                          return copy;
+                        });
+                      }}
+                    />
+                    <span className="text-muted text-sm">{itm.unit}</span>
+                    <button
+                      type="button"
+                      className="btn btn-icon-remove"
+                      onClick={() => {
+                        setEditMissingItems((prev) => prev.filter((_, i) => i !== idx));
+                      }}
+                      aria-label={`Remove ${itm.name}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="app-actions-row">
+              <button type="button" className="btn btn-ghost" onClick={cancelAddAllMissing}>
+                Cancel
+              </button>
+              <button type="button" className="btn" onClick={confirmAddAllMissing} disabled={editMissingItems.length === 0}>
+                Add to Shopping List
+              </button>
+            </div>
+          </Modal>
         </>
       )}
     </div>

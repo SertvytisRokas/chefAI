@@ -210,10 +210,9 @@ export default function ProfilePage() {
   }
 
   return (
-    <div className="mt-8" style={{ maxWidth: '600px' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}>
-        Profile
-      </h1>
+    <div className="app-page">
+      <h1 className="page-title">Profile</h1>
+      <p className="page-lead">Account settings, allergens, and taste preferences.</p>
       <div className="tab-row">
         <button
           onClick={() => setActiveTab('general')}
@@ -234,21 +233,19 @@ export default function ProfilePage() {
           Likes & Dislikes
         </button>
       </div>
-      {message && (
-        <p style={{ color: 'var(--success-color)', marginBottom: '1rem' }}>{message}</p>
-      )}
+      {message && <p className="app-message app-message--success">{message}</p>}
       {activeTab === 'general' && (
-        <div className="space-y-4">
-          <div className="flex flex-col">
-            <label className="mb-1">Email</label>
+        <div className="app-section space-y-4">
+          <div className="app-field">
+            <label className="app-label">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
           </div>
-          <div className="flex flex-col">
-            <label className="mb-1">New password</label>
+          <div className="app-field">
+            <label className="app-label">New password</label>
             <input
               type="password"
               value={password}
@@ -256,8 +253,8 @@ export default function ProfilePage() {
               placeholder="••••••••"
             />
           </div>
-          <div className="flex flex-col">
-            <label className="mb-1">Diet</label>
+          <div className="app-field">
+            <label className="app-label">Diet</label>
             <select
               value={selectedDietId ?? ''}
               onChange={(e) => setSelectedDietId(e.target.value ? parseInt(e.target.value) : null)}
@@ -276,10 +273,10 @@ export default function ProfilePage() {
         </div>
       )}
       {activeTab === 'allergens' && (
-        <div className="space-y-4">
-          <div className="flex gap-2 items-end">
-            <div className="flex flex-col" style={{ flex: 1 }}>
-              <label className="mb-1">Add allergen</label>
+        <div className="app-section space-y-4">
+          <div className="app-toolbar">
+            <div className="app-field app-field--grow">
+              <label className="app-label">Add allergen</label>
               <input
                 type="text"
                 value={newAllergen}
@@ -294,33 +291,31 @@ export default function ProfilePage() {
               Add
             </button>
           </div>
-          <ul className="space-y-2">
+          <ul className="app-list space-y-2">
             {allergens.map((a) => (
-              <li
-                key={a.id}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}
-              >
+              <li key={a.id} className="app-list-row">
                 <span>{a.name}</span>
                 <button
+                  type="button"
                   onClick={() => handleDeleteAllergen(a.id)}
                   disabled={loading}
-                  style={{ color: 'var(--error-color)', background: 'none', border: 'none' }}
+                  className="btn-text-danger"
                 >
-                  ✕
+                  Remove
                 </button>
               </li>
             ))}
             {allergens.length === 0 && (
-              <li style={{ color: 'var(--muted-text-color)' }}>No allergens set.</li>
+              <li className="app-list-empty">No allergens set.</li>
             )}
           </ul>
         </div>
       )}
       {activeTab === 'preferences' && (
-        <div className="space-y-4">
-          <div className="flex gap-2 items-end">
-            <div className="flex flex-col" style={{ flex: 1 }}>
-              <label className="mb-1">Add like/dislike</label>
+        <div className="app-section space-y-4">
+          <div className="app-toolbar">
+            <div className="app-field app-field--grow">
+              <label className="app-label">Add like/dislike</label>
               <input
                 type="text"
                 value={newPrefName}
@@ -342,35 +337,34 @@ export default function ProfilePage() {
               Add
             </button>
           </div>
-          <ul className="space-y-2">
+          <ul className="app-list space-y-2">
             {preferences.map((p) => (
-              <li
-                key={p.id}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.5rem' }}
-              >
+              <li key={p.id} className="app-list-row">
                 <span>
                   {p.name} ({p.preference_type})
                 </span>
-                <div className="flex gap-2">
+                <div className="app-card-actions">
                   <button
+                    type="button"
                     onClick={() => handleTogglePreference(p)}
                     disabled={loading}
-                    style={{ color: 'var(--accent-color)', background: 'none', border: 'none' }}
+                    className="btn-ghost btn-sm"
                   >
                     Toggle
                   </button>
                   <button
+                    type="button"
                     onClick={() => handleDeletePreference(p.id)}
                     disabled={loading}
-                    style={{ color: 'var(--error-color)', background: 'none', border: 'none' }}
+                    className="btn-text-danger"
                   >
-                    ✕
+                    Remove
                   </button>
                 </div>
               </li>
             ))}
             {preferences.length === 0 && (
-              <li style={{ color: 'var(--muted-text-color)' }}>No preferences set.</li>
+              <li className="app-list-empty">No preferences set.</li>
             )}
           </ul>
         </div>

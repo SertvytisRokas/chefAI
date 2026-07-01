@@ -24,66 +24,21 @@ import {
 } from '../../lib/personalization';
 
 const sectionStyles = {
-  section: {
-    marginBottom: '2rem',
-    padding: '1.25rem',
-    backgroundColor: 'var(--surface-color)',
-    borderRadius: '8px',
-    border: '1px solid var(--border-color)'
-  } as React.CSSProperties,
-  sectionTitle: {
-    fontSize: '1.1rem',
-    fontWeight: 600,
-    marginBottom: '0.5rem',
-    color: 'var(--text-color)'
-  } as React.CSSProperties,
-  sectionDesc: {
-    fontSize: '0.9rem',
-    color: 'var(--muted-text-color)',
-    marginBottom: '1rem'
-  } as React.CSSProperties,
-  field: { marginBottom: '1rem' } as React.CSSProperties,
-  label: { display: 'block', marginBottom: '0.35rem', fontSize: '0.9rem' } as React.CSSProperties,
-  row: { display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' as const } as React.CSSProperties,
-  unitToggle: {
-    display: 'flex',
-    gap: '0.25rem'
-  } as React.CSSProperties,
-  unitBtn: (active: boolean) =>
-    ({
-      padding: '0.35rem 0.75rem',
-      borderRadius: '4px',
-      border: '1px solid var(--border-color)',
-      background: active ? 'var(--accent-color)' : 'var(--surface-hover)',
-      color: active ? '#fff' : 'var(--text-color)',
-      cursor: 'pointer',
-      fontSize: '0.9rem'
-    }) as React.CSSProperties,
-  sliderRow: { display: 'flex', alignItems: 'center', gap: '0.75rem' } as React.CSSProperties,
-  slider: { flex: 1, minWidth: 120 } as React.CSSProperties,
-  inputSmall: { width: '5rem', padding: '0.35rem 0.5rem' } as React.CSSProperties,
-  chipGrid: {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: '0.5rem'
-  } as React.CSSProperties,
-  chip: (selected: boolean) =>
-    ({
-      padding: '0.35rem 0.65rem',
-      borderRadius: '999px',
-      border: `1px solid ${selected ? 'var(--accent-color)' : 'var(--border-color)'}`,
-      background: selected ? 'var(--accent-color)' : 'transparent',
-      color: selected ? '#fff' : 'var(--text-color)',
-      cursor: 'pointer',
-      fontSize: '0.85rem'
-    }) as React.CSSProperties,
-  listItem: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    marginBottom: '0.5rem'
-  } as React.CSSProperties,
-  listInput: { flex: 1, minWidth: 0 } as React.CSSProperties
+  section: 'app-section',
+  sectionTitle: 'app-section-title',
+  sectionDesc: 'app-section-desc',
+  field: 'app-field',
+  label: 'app-label',
+  row: 'app-row',
+  unitToggle: 'app-segmented',
+  unitBtn: (active: boolean) => `app-segmented-btn${active ? ' active' : ''}`,
+  sliderRow: 'app-slider-row',
+  slider: 'app-slider',
+  inputSmall: 'app-input-sm',
+  chipGrid: 'app-chip-grid',
+  chip: (active: boolean) => `app-chip${active ? ' active' : ''}`,
+  listItem: 'app-list-item',
+  listInput: 'app-input-grow',
 };
 
 function clamp(num: number, min: number, max: number) {
@@ -311,16 +266,18 @@ export default function QuestionnairePage() {
 
   if (!user) {
     return (
-      <div style={{ padding: '1.5rem' }}>
-        <p>Please <a href="/login">log in</a> to complete the personalization quiz.</p>
+      <div className="app-page">
+        <p className="page-lead">
+          Please <a href="/login">log in</a> to complete the personalization quiz.
+        </p>
       </div>
     );
   }
 
   if (loading) {
     return (
-      <div style={{ padding: '1.5rem' }}>
-        <p>Loading your saved answers…</p>
+      <div className="app-page">
+        <p className="app-list-empty">Loading your saved answers…</p>
       </div>
     );
   }
@@ -345,31 +302,31 @@ export default function QuestionnairePage() {
   const weightGoalKg = answers.weightGoalValue ?? 70;
 
   return (
-    <div style={{ padding: '1.5rem', maxWidth: '720px' }}>
-      <h1 style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '0.5rem' }}>Personalization</h1>
-      <p style={{ color: 'var(--muted-text-color)', marginBottom: '1.5rem' }}>
+    <div className="app-page">
+      <h1 className="page-title">Personalization</h1>
+      <p className="page-lead">
         Your answers tailor portion sizes, diet, cuisines, and recipe suggestions. You can edit them anytime.
       </p>
-      {error && <p style={{ color: 'var(--error-color)', marginBottom: '1rem' }}>{error}</p>}
-      {message && <p style={{ color: 'var(--success-color)', marginBottom: '1rem' }}>{message}</p>}
+      {error && <p className="app-message app-message--error">{error}</p>}
+      {message && <p className="app-message app-message--success">{message}</p>}
 
       {/* 1. Physical & Body Profile */}
-      <section style={sectionStyles.section}>
-        <h2 style={sectionStyles.sectionTitle}>1. Physical & Body Profile</h2>
-        <p style={sectionStyles.sectionDesc}>
+      <section className={sectionStyles.section}>
+        <h2 className={sectionStyles.sectionTitle}>1. Physical & Body Profile</h2>
+        <p className={sectionStyles.sectionDesc}>
           Basic metrics to estimate nutritional needs and portion sizes (e.g. caloric needs for a larger or more active person).
         </p>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Age</label>
-          <div style={sectionStyles.row}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Age</label>
+          <div className={sectionStyles.row}>
             <input
               type="range"
               min={1}
               max={120}
               value={ageVal === 'prefer not to say' || ageVal == null ? 30 : clamp(ageNumber, 1, 120)}
               onChange={(e) => set('age', parseInt(e.target.value, 10))}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
             <input
               type="text"
@@ -382,11 +339,11 @@ export default function QuestionnairePage() {
               }}
               onBlur={() => set('age', ageVal != null && ageVal !== 'prefer not to say' ? clamp(ageVal as number, 1, 120) : ageVal)}
               placeholder="Age"
-              style={sectionStyles.inputSmall}
+              className={sectionStyles.inputSmall}
             />
             <button
               type="button"
-              style={sectionStyles.unitBtn(ageVal === 'prefer not to say')}
+              className={sectionStyles.unitBtn(ageVal === 'prefer not to say')}
               onClick={() => set('age', ageVal === 'prefer not to say' ? ageNumber : 'prefer not to say')}
             >
               Prefer not to say
@@ -394,14 +351,14 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Gender</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Gender</label>
+          <div className={sectionStyles.chipGrid}>
             {GENDERS.map((g) => (
               <button
                 key={g}
                 type="button"
-                style={sectionStyles.chip(answers.gender === g)}
+                className={sectionStyles.chip(answers.gender === g)}
                 onClick={() => set('gender', answers.gender === g ? null! : g)}
               >
                 {g.replace(/_/g, ' ')}
@@ -410,32 +367,32 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Height</label>
-          <div style={sectionStyles.unitToggle}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Height</label>
+          <div className={sectionStyles.unitToggle}>
             <button
               type="button"
-              style={sectionStyles.unitBtn(answers.heightUnit === 'cm')}
+              className={sectionStyles.unitBtn(answers.heightUnit === 'cm')}
               onClick={() => set('heightUnit', 'cm')}
             >
               cm
             </button>
             <button
               type="button"
-              style={sectionStyles.unitBtn(answers.heightUnit === 'ft')}
+              className={sectionStyles.unitBtn(answers.heightUnit === 'ft')}
               onClick={() => set('heightUnit', 'ft')}
             >
               ft / in
             </button>
           </div>
-          <div style={sectionStyles.sliderRow}>
+          <div className={sectionStyles.sliderRow}>
             <input
               type="range"
               min={HEIGHT_CM_MIN}
               max={HEIGHT_CM_MAX}
               value={clamp(heightCm, HEIGHT_CM_MIN, HEIGHT_CM_MAX)}
               onChange={(e) => set('heightValue', parseInt(e.target.value, 10))}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
             {answers.heightUnit === 'ft' ? (
               <>
@@ -449,9 +406,9 @@ export default function QuestionnairePage() {
                     set('heightValue', ftInToCm(ft, cmToFtIn(heightCm).in));
                   }}
                   onBlur={() => set('heightValue', answers.heightValue != null ? clamp(answers.heightValue, HEIGHT_CM_MIN, HEIGHT_CM_MAX) : heightCm)}
-                  style={{ ...sectionStyles.inputSmall, width: '3rem' }}
+                  className={`${sectionStyles.inputSmall} app-input-sm--xs`}
                 />
-                <span style={{ fontSize: '0.9rem' }}>ft</span>
+                <span className="app-slider-label">ft</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -462,9 +419,9 @@ export default function QuestionnairePage() {
                     set('heightValue', ftInToCm(cmToFtIn(heightCm).ft, isNaN(inVal) ? 0 : inVal));
                   }}
                   onBlur={() => set('heightValue', answers.heightValue != null ? clamp(answers.heightValue, HEIGHT_CM_MIN, HEIGHT_CM_MAX) : heightCm)}
-                  style={{ ...sectionStyles.inputSmall, width: '3rem' }}
+                  className={`${sectionStyles.inputSmall} app-input-sm--xs`}
                 />
-                <span style={{ fontSize: '0.9rem' }}>in</span>
+                <span className="app-slider-label">in</span>
               </>
             ) : (
               <input
@@ -477,38 +434,38 @@ export default function QuestionnairePage() {
                   else set('heightValue', parseInt(v, 10) || 0);
                 }}
                 onBlur={() => set('heightValue', answers.heightValue != null ? clamp(answers.heightValue, HEIGHT_CM_MIN, HEIGHT_CM_MAX) : null)}
-                style={sectionStyles.inputSmall}
+                className={sectionStyles.inputSmall}
               />
             )}
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Weight</label>
-          <div style={sectionStyles.unitToggle}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Weight</label>
+          <div className={sectionStyles.unitToggle}>
             <button
               type="button"
-              style={sectionStyles.unitBtn(answers.weightUnit === 'kg')}
+              className={sectionStyles.unitBtn(answers.weightUnit === 'kg')}
               onClick={() => set('weightUnit', 'kg')}
             >
               kg
             </button>
             <button
               type="button"
-              style={sectionStyles.unitBtn(answers.weightUnit === 'lbs')}
+              className={sectionStyles.unitBtn(answers.weightUnit === 'lbs')}
               onClick={() => set('weightUnit', 'lbs')}
             >
               lbs
             </button>
           </div>
-          <div style={sectionStyles.sliderRow}>
+          <div className={sectionStyles.sliderRow}>
             <input
               type="range"
               min={WEIGHT_KG_MIN}
               max={WEIGHT_KG_MAX}
               value={clamp(weightKg, WEIGHT_KG_MIN, WEIGHT_KG_MAX)}
               onChange={(e) => set('weightValue', parseFloat(e.target.value))}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
             {answers.weightUnit === 'lbs' ? (
               <input
@@ -521,7 +478,7 @@ export default function QuestionnairePage() {
                   else set('weightValue', lbsToKg(parseFloat(v) || 0));
                 }}
                 onBlur={() => set('weightValue', answers.weightValue != null ? clamp(answers.weightValue, WEIGHT_KG_MIN, WEIGHT_KG_MAX) : null)}
-                style={sectionStyles.inputSmall}
+                className={sectionStyles.inputSmall}
               />
             ) : (
               <input
@@ -534,16 +491,16 @@ export default function QuestionnairePage() {
                   else set('weightValue', parseFloat(v) || 0);
                 }}
                 onBlur={() => set('weightValue', answers.weightValue != null ? clamp(answers.weightValue, WEIGHT_KG_MIN, WEIGHT_KG_MAX) : null)}
-                style={sectionStyles.inputSmall}
+                className={sectionStyles.inputSmall}
               />
             )}
-            <span style={{ fontSize: '0.9rem', minWidth: '2rem' }}>{answers.weightUnit === 'lbs' ? 'lbs' : 'kg'}</span>
+            <span className="app-slider-label app-slider-label--unit">{answers.weightUnit === 'lbs' ? 'lbs' : 'kg'}</span>
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Activity level</label>
-          <div style={sectionStyles.sliderRow}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Activity level</label>
+          <div className={sectionStyles.sliderRow}>
             <input
               type="range"
               min={0}
@@ -555,28 +512,28 @@ export default function QuestionnairePage() {
                 set('activityLevelValue', v);
                 set('activityLevel', ACTIVITY_LEVELS[valueToCategoryIndex(v, activityN)]);
               }}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
-            <span style={{ minWidth: '6rem' }}>{ACTIVITY_LEVELS[valueToCategoryIndex(activitySliderVal, activityN)]}</span>
+            <span className="app-slider-value">{ACTIVITY_LEVELS[valueToCategoryIndex(activitySliderVal, activityN)]}</span>
           </div>
         </div>
       </section>
 
       {/* 2. Dietary Preferences & Restrictions */}
-      <section style={sectionStyles.section}>
-        <h2 style={sectionStyles.sectionTitle}>2. Dietary Preferences & Restrictions</h2>
-        <p style={sectionStyles.sectionDesc}>
+      <section className={sectionStyles.section}>
+        <h2 className={sectionStyles.sectionTitle}>2. Dietary Preferences & Restrictions</h2>
+        <p className={sectionStyles.sectionDesc}>
           Diet type, lifestyle diet, and religious/cultural guidelines so the AI suggests suitable recipes and omits unsuitable ones.
         </p>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Diet type</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Diet type</label>
+          <div className={sectionStyles.chipGrid}>
             {DIET_TYPES.map((d) => (
               <button
                 key={d}
                 type="button"
-                style={sectionStyles.chip(answers.dietType === d)}
+                className={sectionStyles.chip(answers.dietType === d)}
                 onClick={() => set('dietType', answers.dietType === d ? null! : d)}
               >
                 {d}
@@ -585,14 +542,14 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Dietary lifestyle</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Dietary lifestyle</label>
+          <div className={sectionStyles.chipGrid}>
             {DIETARY_LIFESTYLES.filter((x) => x !== 'other').map((d) => (
               <button
                 key={d}
                 type="button"
-                style={sectionStyles.chip((answers.dietaryLifestyle ?? []).includes(d))}
+                className={sectionStyles.chip((answers.dietaryLifestyle ?? []).includes(d))}
                 onClick={() => toggleMulti('dietaryLifestyle', d, answers.dietaryLifestyle)}
               >
                 {d}
@@ -604,18 +561,18 @@ export default function QuestionnairePage() {
             placeholder="Other (freeform)"
             value={answers.dietaryLifestyleOther ?? ''}
             onChange={(e) => set('dietaryLifestyleOther', e.target.value || null)}
-            style={{ marginTop: '0.5rem', maxWidth: '20rem' }}
+            className="mt-2 app-input--max-sm"
                 />
               </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Religious / cultural restrictions</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Religious / cultural restrictions</label>
+          <div className={sectionStyles.chipGrid}>
             {RELIGIOUS_RESTRICTIONS.filter((x) => x !== 'Other').map((r) => (
               <button
                 key={r}
                 type="button"
-                style={sectionStyles.chip((answers.religiousRestrictions ?? []).includes(r))}
+                className={sectionStyles.chip((answers.religiousRestrictions ?? []).includes(r))}
                 onClick={() => toggleMulti('religiousRestrictions', r, answers.religiousRestrictions)}
               >
                 {r}
@@ -627,26 +584,26 @@ export default function QuestionnairePage() {
             placeholder="Other (freeform)"
             value={answers.religiousRestrictionsOther ?? ''}
             onChange={(e) => set('religiousRestrictionsOther', e.target.value || null)}
-            style={{ marginTop: '0.5rem', maxWidth: '20rem' }}
+            className="mt-2 app-input--max-sm"
           />
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Allergens (foods to avoid)</label>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Allergens (foods to avoid)</label>
           {(answers.allergens ?? []).map((a, i) => (
-            <div key={i} style={sectionStyles.listItem}>
-              <span style={sectionStyles.listInput}>{a}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removeFromList('allergens', i)}>
+            <div key={i} className={sectionStyles.listItem}>
+              <span className={sectionStyles.listInput}>{a}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removeFromList('allergens', i)}>
                 Remove
               </button>
             </div>
           ))}
-          <div style={sectionStyles.listItem}>
+          <div className={sectionStyles.listItem}>
             <input
               type="text"
               id="new-allergen"
               placeholder="Add allergen"
-              style={sectionStyles.listInput}
+              className={sectionStyles.listInput}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const el = e.target as HTMLInputElement;
@@ -657,8 +614,7 @@ export default function QuestionnairePage() {
             />
           <button
               type="button"
-            className="btn"
-              style={{ padding: '0.25rem 0.5rem' }}
+            className="btn btn-xs"
               onClick={() => {
                 const el = document.getElementById('new-allergen') as HTMLInputElement | null;
                 if (el) {
@@ -674,20 +630,20 @@ export default function QuestionnairePage() {
       </section>
 
       {/* 3. Health & Wellness Goals */}
-      <section style={sectionStyles.section}>
-        <h2 style={sectionStyles.sectionTitle}>3. Health & Wellness Goals</h2>
-        <p style={sectionStyles.sectionDesc}>
+      <section className={sectionStyles.section}>
+        <h2 className={sectionStyles.sectionTitle}>3. Health & Wellness Goals</h2>
+        <p className={sectionStyles.sectionDesc}>
           Goals so the AI can tailor recipes (e.g. calorie targets, high-protein for muscle gain, low-sodium for heart health).
         </p>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Primary goal (select up to 3) — {primaryGoalsList.length}/3 selected</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Primary goal (select up to 3) — {primaryGoalsList.length}/3 selected</label>
+          <div className={sectionStyles.chipGrid}>
             {PRIMARY_GOALS.filter((g) => g !== 'other').map((g) => (
               <button
                 key={g}
                 type="button"
-                style={sectionStyles.chip(primaryGoalsList.includes(g))}
+                className={sectionStyles.chip(primaryGoalsList.includes(g))}
                 onClick={() => togglePrimaryGoal(g)}
                 disabled={!primaryGoalsList.includes(g) && primaryGoalsList.length >= 3}
               >
@@ -696,20 +652,20 @@ export default function QuestionnairePage() {
             ))}
           </div>
           {primaryGoalsList.filter((g) => !(PRIMARY_GOALS as readonly string[]).includes(g)).map((g, i) => (
-            <div key={`other-${i}`} style={{ ...sectionStyles.listItem, marginTop: '0.5rem' }}>
-              <span style={sectionStyles.listInput}>{g}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removePrimaryGoal(primaryGoalsList.indexOf(g))}>
+            <div key={`other-${i}`} className="app-list-item mt-2">
+              <span className={sectionStyles.listInput}>{g}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removePrimaryGoal(primaryGoalsList.indexOf(g))}>
                 Remove
               </button>
             </div>
           ))}
           {primaryGoalsList.length < 3 && (
-            <div style={sectionStyles.listItem}>
+            <div className={sectionStyles.listItem}>
               <input
                 type="text"
                 id="new-primary-goal"
                 placeholder="Add other goal"
-                style={sectionStyles.listInput}
+                className={sectionStyles.listInput}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const el = e.target as HTMLInputElement;
@@ -720,8 +676,7 @@ export default function QuestionnairePage() {
               />
               <button
                 type="button"
-                className="btn"
-                style={{ padding: '0.25rem 0.5rem' }}
+              className="btn btn-xs"
                 onClick={() => {
                   const el = document.getElementById('new-primary-goal') as HTMLInputElement | null;
                   if (el) {
@@ -736,27 +691,27 @@ export default function QuestionnairePage() {
           )}
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Target weight (if weight management is a goal)</label>
-          <div style={sectionStyles.unitToggle}>
-            <button type="button" style={sectionStyles.unitBtn(answers.weightGoalUnit === 'kg')} onClick={() => set('weightGoalUnit', 'kg')}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Target weight (if weight management is a goal)</label>
+          <div className={sectionStyles.unitToggle}>
+            <button type="button" className={sectionStyles.unitBtn(answers.weightGoalUnit === 'kg')} onClick={() => set('weightGoalUnit', 'kg')}>
               kg
             </button>
-            <button type="button" style={sectionStyles.unitBtn(answers.weightGoalUnit === 'lbs')} onClick={() => set('weightGoalUnit', 'lbs')}>
+            <button type="button" className={sectionStyles.unitBtn(answers.weightGoalUnit === 'lbs')} onClick={() => set('weightGoalUnit', 'lbs')}>
               lbs
             </button>
           </div>
-          <div style={sectionStyles.sliderRow}>
+          <div className={sectionStyles.sliderRow}>
             <input
               type="range"
               min={WEIGHT_KG_MIN}
               max={WEIGHT_KG_MAX}
               value={weightGoalKg}
               onChange={(e) => set('weightGoalValue', parseFloat(e.target.value))}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
             {answers.weightGoalUnit === 'lbs' ? (
-              <span style={{ ...sectionStyles.inputSmall, display: 'inline-flex', alignItems: 'center' }}>
+            <span className={`${sectionStyles.inputSmall} app-input-badge`}>
                 {kgToLbs(weightGoalKg)} lbs
               </span>
             ) : (
@@ -769,15 +724,15 @@ export default function QuestionnairePage() {
                   if (v === '') set('weightGoalValue', null);
                   else set('weightGoalValue', clamp(parseFloat(v) || 0, WEIGHT_KG_MIN, WEIGHT_KG_MAX));
                 }}
-                style={sectionStyles.inputSmall}
+                className={sectionStyles.inputSmall}
               />
             )}
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Daily calorie target (kcal)</label>
-          <div style={sectionStyles.sliderRow}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Daily calorie target (kcal)</label>
+          <div className={sectionStyles.sliderRow}>
             <input
               type="range"
               min={1000}
@@ -785,7 +740,7 @@ export default function QuestionnairePage() {
               step={50}
               value={clamp(answers.dailyCalorieTarget ?? 2000, 1000, 4000)}
               onChange={(e) => set('dailyCalorieTarget', parseInt(e.target.value, 10))}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
             <input
               type="text"
@@ -797,19 +752,19 @@ export default function QuestionnairePage() {
                 else set('dailyCalorieTarget', parseInt(v, 10) || 0);
               }}
               onBlur={() => set('dailyCalorieTarget', answers.dailyCalorieTarget != null ? clamp(answers.dailyCalorieTarget, 1000, 4000) : null)}
-              style={sectionStyles.inputSmall}
+              className={sectionStyles.inputSmall}
             />
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Meals per day</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Meals per day</label>
+          <div className={sectionStyles.chipGrid}>
             {MEAL_FREQUENCY_OPTIONS.map((n) => (
               <button
                 key={n}
                 type="button"
-                style={sectionStyles.chip(answers.mealFrequency === n)}
+                className={sectionStyles.chip(answers.mealFrequency === n)}
                 onClick={() => set('mealFrequency', answers.mealFrequency === n ? null! : n)}
               >
                 {n === 5 ? '5+' : String(n)}
@@ -820,20 +775,20 @@ export default function QuestionnairePage() {
       </section>
 
       {/* 4. Taste & Cuisine Preferences */}
-      <section style={sectionStyles.section}>
-        <h2 style={sectionStyles.sectionTitle}>4. Taste & Cuisine Preferences</h2>
-        <p style={sectionStyles.sectionDesc}>
+      <section className={sectionStyles.section}>
+        <h2 className={sectionStyles.sectionTitle}>4. Taste & Cuisine Preferences</h2>
+        <p className={sectionStyles.sectionDesc}>
           Cuisines and flavors you enjoy so recipe suggestions are more appealing.
         </p>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Favorite cuisines</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Favorite cuisines</label>
+          <div className={sectionStyles.chipGrid}>
             {CUISINE_OPTIONS.filter((c) => c !== 'Other').map((c) => (
               <button
                 key={c}
                 type="button"
-                style={sectionStyles.chip((answers.favoriteCuisines ?? []).includes(c))}
+                className={sectionStyles.chip((answers.favoriteCuisines ?? []).includes(c))}
                 onClick={() => toggleMulti('favoriteCuisines', c, answers.favoriteCuisines)}
               >
                 {c}
@@ -841,27 +796,27 @@ export default function QuestionnairePage() {
             ))}
           </div>
           {(answers.favoriteCuisinesOther ?? []).map((item, i) => (
-            <div key={i} style={sectionStyles.listItem}>
-              <span style={sectionStyles.listInput}>{item}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removeFromList('favoriteCuisinesOther', i)}>
+            <div key={i} className={sectionStyles.listItem}>
+              <span className={sectionStyles.listInput}>{item}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removeFromList('favoriteCuisinesOther', i)}>
                 Remove
               </button>
             </div>
           ))}
-          <div style={sectionStyles.listItem}>
-            <input type="text" id="new-favorite-cuisine" placeholder="Add other cuisine" style={sectionStyles.listInput} onKeyDown={(e) => { if (e.key === 'Enter') { const el = e.target as HTMLInputElement; addToList('favoriteCuisinesOther', el.value); el.value = ''; } }} />
-            <button type="button" className="btn" style={{ padding: '0.25rem 0.5rem' }} onClick={() => { const el = document.getElementById('new-favorite-cuisine') as HTMLInputElement | null; if (el) { addToList('favoriteCuisinesOther', el.value); el.value = ''; } }}>Add</button>
+          <div className={sectionStyles.listItem}>
+            <input type="text" id="new-favorite-cuisine" placeholder="Add other cuisine" className={sectionStyles.listInput} onKeyDown={(e) => { if (e.key === 'Enter') { const el = e.target as HTMLInputElement; addToList('favoriteCuisinesOther', el.value); el.value = ''; } }} />
+            <button type="button" className="btn btn-xs" onClick={() => { const el = document.getElementById('new-favorite-cuisine') as HTMLInputElement | null; if (el) { addToList('favoriteCuisinesOther', el.value); el.value = ''; } }}>Add</button>
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Cuisines to limit</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Cuisines to limit</label>
+          <div className={sectionStyles.chipGrid}>
             {CUISINE_OPTIONS.filter((c) => c !== 'Other').map((c) => (
               <button
                 key={c}
                 type="button"
-                style={sectionStyles.chip((answers.cuisinesToLimit ?? []).includes(c))}
+                className={sectionStyles.chip((answers.cuisinesToLimit ?? []).includes(c))}
                 onClick={() => toggleMulti('cuisinesToLimit', c, answers.cuisinesToLimit)}
               >
                 {c}
@@ -869,20 +824,20 @@ export default function QuestionnairePage() {
             ))}
           </div>
           {(answers.cuisinesToLimitOther ?? []).map((item, i) => (
-            <div key={i} style={sectionStyles.listItem}>
-              <span style={sectionStyles.listInput}>{item}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removeFromList('cuisinesToLimitOther', i)}>Remove</button>
+            <div key={i} className={sectionStyles.listItem}>
+              <span className={sectionStyles.listInput}>{item}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removeFromList('cuisinesToLimitOther', i)}>Remove</button>
             </div>
           ))}
-          <div style={sectionStyles.listItem}>
-            <input type="text" id="new-cuisine-limit" placeholder="Add other cuisine to limit" style={sectionStyles.listInput} onKeyDown={(e) => { if (e.key === 'Enter') { const el = e.target as HTMLInputElement; addToList('cuisinesToLimitOther', el.value); el.value = ''; } }} />
-            <button type="button" className="btn" style={{ padding: '0.25rem 0.5rem' }} onClick={() => { const el = document.getElementById('new-cuisine-limit') as HTMLInputElement | null; if (el) { addToList('cuisinesToLimitOther', el.value); el.value = ''; } }}>Add</button>
+          <div className={sectionStyles.listItem}>
+            <input type="text" id="new-cuisine-limit" placeholder="Add other cuisine to limit" className={sectionStyles.listInput} onKeyDown={(e) => { if (e.key === 'Enter') { const el = e.target as HTMLInputElement; addToList('cuisinesToLimitOther', el.value); el.value = ''; } }} />
+            <button type="button" className="btn btn-xs" onClick={() => { const el = document.getElementById('new-cuisine-limit') as HTMLInputElement | null; if (el) { addToList('cuisinesToLimitOther', el.value); el.value = ''; } }}>Add</button>
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Spice level</label>
-          <div style={sectionStyles.sliderRow}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Spice level</label>
+          <div className={sectionStyles.sliderRow}>
             <input
               type="range"
               min={0}
@@ -894,20 +849,20 @@ export default function QuestionnairePage() {
                 set('spiceLevelValue', v);
                 set('spiceLevel', SPICE_LEVELS[valueToCategoryIndex(v, spiceN)]);
               }}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
-            <span style={{ minWidth: '6rem' }}>{SPICE_LEVELS[valueToCategoryIndex(spiceSliderVal, spiceN)]}</span>
+            <span className="app-slider-value">{SPICE_LEVELS[valueToCategoryIndex(spiceSliderVal, spiceN)]}</span>
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Flavor preferences</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Flavor preferences</label>
+          <div className={sectionStyles.chipGrid}>
             {FLAVOR_OPTIONS.filter((f) => f !== 'other').map((f) => (
               <button
                 key={f}
                 type="button"
-                style={sectionStyles.chip((answers.flavorPreferences ?? []).includes(f))}
+                className={sectionStyles.chip((answers.flavorPreferences ?? []).includes(f))}
                 onClick={() => toggleMulti('flavorPreferences', f, answers.flavorPreferences)}
               >
                 {f}
@@ -915,25 +870,25 @@ export default function QuestionnairePage() {
             ))}
           </div>
           {(answers.flavorPreferencesOther ?? []).map((item, i) => (
-            <div key={i} style={sectionStyles.listItem}>
-              <span style={sectionStyles.listInput}>{item}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removeFromList('flavorPreferencesOther', i)}>Remove</button>
+            <div key={i} className={sectionStyles.listItem}>
+              <span className={sectionStyles.listInput}>{item}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removeFromList('flavorPreferencesOther', i)}>Remove</button>
             </div>
           ))}
-          <div style={sectionStyles.listItem}>
-            <input type="text" id="new-flavor" placeholder="Add other flavor" style={sectionStyles.listInput} onKeyDown={(e) => { if (e.key === 'Enter') { const el = e.target as HTMLInputElement; addToList('flavorPreferencesOther', el.value); el.value = ''; } }} />
-            <button type="button" className="btn" style={{ padding: '0.25rem 0.5rem' }} onClick={() => { const el = document.getElementById('new-flavor') as HTMLInputElement | null; if (el) { addToList('flavorPreferencesOther', el.value); el.value = ''; } }}>Add</button>
+          <div className={sectionStyles.listItem}>
+            <input type="text" id="new-flavor" placeholder="Add other flavor" className={sectionStyles.listInput} onKeyDown={(e) => { if (e.key === 'Enter') { const el = e.target as HTMLInputElement; addToList('flavorPreferencesOther', el.value); el.value = ''; } }} />
+            <button type="button" className="btn btn-xs" onClick={() => { const el = document.getElementById('new-flavor') as HTMLInputElement | null; if (el) { addToList('flavorPreferencesOther', el.value); el.value = ''; } }}>Add</button>
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Preferred proteins</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Preferred proteins</label>
+          <div className={sectionStyles.chipGrid}>
             {PROTEIN_OPTIONS.filter((p) => p !== 'other').map((p) => (
               <button
                 key={p}
                 type="button"
-                style={sectionStyles.chip((answers.preferredProteins ?? []).includes(p))}
+                className={sectionStyles.chip((answers.preferredProteins ?? []).includes(p))}
                 onClick={() => toggleMulti('preferredProteins', p, answers.preferredProteins)}
               >
                 {p}
@@ -941,19 +896,19 @@ export default function QuestionnairePage() {
             ))}
           </div>
           {(answers.preferredProteins ?? []).filter((p) => !PROTEIN_OPTIONS.includes(p as any)).map((p, i) => (
-            <div key={`other-${i}`} style={sectionStyles.listItem}>
-              <span style={sectionStyles.listInput}>{p}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removeFromList('preferredProteins', (answers.preferredProteins ?? []).indexOf(p))}>
+            <div key={`other-${i}`} className={sectionStyles.listItem}>
+              <span className={sectionStyles.listInput}>{p}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removeFromList('preferredProteins', (answers.preferredProteins ?? []).indexOf(p))}>
                 Remove
               </button>
             </div>
           ))}
-          <div style={sectionStyles.listItem}>
+          <div className={sectionStyles.listItem}>
             <input
               type="text"
               id="new-protein"
               placeholder="Add other protein"
-              style={sectionStyles.listInput}
+              className={sectionStyles.listInput}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const el = e.target as HTMLInputElement;
@@ -964,8 +919,7 @@ export default function QuestionnairePage() {
             />
             <button
               type="button"
-              className="btn"
-              style={{ padding: '0.25rem 0.5rem' }}
+              className="btn btn-xs"
               onClick={() => {
                 const el = document.getElementById('new-protein') as HTMLInputElement | null;
                 if (el) {
@@ -979,22 +933,22 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Favorite ingredients or dishes</label>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Favorite ingredients or dishes</label>
           {(answers.favoriteIngredientsDishes ?? []).map((item, i) => (
-            <div key={i} style={sectionStyles.listItem}>
-              <span style={sectionStyles.listInput}>{item}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removeFromList('favoriteIngredientsDishes', i)}>
+            <div key={i} className={sectionStyles.listItem}>
+              <span className={sectionStyles.listInput}>{item}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removeFromList('favoriteIngredientsDishes', i)}>
                 Remove
               </button>
             </div>
           ))}
-          <div style={sectionStyles.listItem}>
+          <div className={sectionStyles.listItem}>
             <input
               type="text"
               id="new-favorite-ingredient"
               placeholder="Add ingredient or dish"
-              style={sectionStyles.listInput}
+              className={sectionStyles.listInput}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const el = e.target as HTMLInputElement;
@@ -1005,8 +959,7 @@ export default function QuestionnairePage() {
             />
             <button
               type="button"
-              className="btn"
-              style={{ padding: '0.25rem 0.5rem' }}
+              className="btn btn-xs"
               onClick={() => {
                 const el = document.getElementById('new-favorite-ingredient') as HTMLInputElement | null;
                 if (el) {
@@ -1022,15 +975,15 @@ export default function QuestionnairePage() {
       </section>
 
       {/* 5. Cooking & Lifestyle Habits */}
-      <section style={sectionStyles.section}>
-        <h2 style={sectionStyles.sectionTitle}>5. Cooking & Lifestyle Habits</h2>
-        <p style={sectionStyles.sectionDesc}>
+      <section className={sectionStyles.section}>
+        <h2 className={sectionStyles.sectionTitle}>5. Cooking & Lifestyle Habits</h2>
+        <p className={sectionStyles.sectionDesc}>
           Cooking skill, time, and kitchen resources so suggestions are practical (e.g. simpler recipes for beginners, using available appliances).
         </p>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Cooking skill level</label>
-          <div style={sectionStyles.sliderRow}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Cooking skill level</label>
+          <div className={sectionStyles.sliderRow}>
             <input
               type="range"
               min={0}
@@ -1042,20 +995,20 @@ export default function QuestionnairePage() {
                 set('cookingSkillLevelValue', v);
                 set('cookingSkillLevel', COOKING_SKILL_LEVELS[valueToCategoryIndex(v, skillN)]);
               }}
-              style={sectionStyles.slider}
+              className={sectionStyles.slider}
             />
-            <span style={{ minWidth: '6rem' }}>{COOKING_SKILL_LEVELS[valueToCategoryIndex(skillSliderVal, skillN)]}</span>
+            <span className="app-slider-value">{COOKING_SKILL_LEVELS[valueToCategoryIndex(skillSliderVal, skillN)]}</span>
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Time to cook per meal</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Time to cook per meal</label>
+          <div className={sectionStyles.chipGrid}>
             {TIME_TO_COOK_OPTIONS.map((t) => (
               <button
                 key={t}
                 type="button"
-                style={sectionStyles.chip(answers.timeToCook === t)}
+                className={sectionStyles.chip(answers.timeToCook === t)}
                 onClick={() => set('timeToCook', answers.timeToCook === t ? null! : t)}
               >
                 {t}
@@ -1064,14 +1017,14 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Kitchen appliances available</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Kitchen appliances available</label>
+          <div className={sectionStyles.chipGrid}>
             {APPLIANCE_OPTIONS.filter((a) => a !== 'other').map((a) => (
               <button
                 key={a}
                 type="button"
-                style={sectionStyles.chip((answers.kitchenAppliances ?? []).includes(a))}
+                className={sectionStyles.chip((answers.kitchenAppliances ?? []).includes(a))}
                 onClick={() => toggleMulti('kitchenAppliances', a, answers.kitchenAppliances)}
               >
                 {a}
@@ -1079,19 +1032,19 @@ export default function QuestionnairePage() {
             ))}
           </div>
           {(answers.kitchenAppliancesOther ?? []).map((a, i) => (
-            <div key={i} style={sectionStyles.listItem}>
-              <span style={sectionStyles.listInput}>{a}</span>
-              <button type="button" className="btn-cancel" style={{ padding: '0.25rem 0.5rem' }} onClick={() => removeFromList('kitchenAppliancesOther', i)}>
+            <div key={i} className={sectionStyles.listItem}>
+              <span className={sectionStyles.listInput}>{a}</span>
+              <button type="button" className="btn-cancel btn-xs" onClick={() => removeFromList('kitchenAppliancesOther', i)}>
                 Remove
               </button>
             </div>
           ))}
-          <div style={sectionStyles.listItem}>
+          <div className={sectionStyles.listItem}>
             <input
               type="text"
               id="new-appliance"
               placeholder="Add other appliance"
-              style={sectionStyles.listInput}
+              className={sectionStyles.listInput}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {
                   const el = e.target as HTMLInputElement;
@@ -1102,8 +1055,7 @@ export default function QuestionnairePage() {
             />
             <button
               type="button"
-              className="btn"
-              style={{ padding: '0.25rem 0.5rem' }}
+              className="btn btn-xs"
               onClick={() => {
                 const el = document.getElementById('new-appliance') as HTMLInputElement | null;
                 if (el) {
@@ -1117,14 +1069,14 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Grocery shopping frequency</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Grocery shopping frequency</label>
+          <div className={sectionStyles.chipGrid}>
             {GROCERY_FREQUENCY_OPTIONS.map((g) => (
               <button
                 key={g}
                 type="button"
-                style={sectionStyles.chip(answers.groceryFrequency === g)}
+                className={sectionStyles.chip(answers.groceryFrequency === g)}
                 onClick={() => set('groceryFrequency', answers.groceryFrequency === g ? null! : g)}
               >
                 {g}
@@ -1133,14 +1085,14 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        <div style={sectionStyles.field}>
-          <label style={sectionStyles.label}>Budget sensitivity</label>
-          <div style={sectionStyles.chipGrid}>
+        <div className={sectionStyles.field}>
+          <label className={sectionStyles.label}>Budget sensitivity</label>
+          <div className={sectionStyles.chipGrid}>
             {BUDGET_OPTIONS.map((b) => (
               <button
                 key={b}
                 type="button"
-                style={sectionStyles.chip(answers.budgetSensitivity === b)}
+                className={sectionStyles.chip(answers.budgetSensitivity === b)}
                 onClick={() => set('budgetSensitivity', answers.budgetSensitivity === b ? null! : b)}
               >
                 {b}
@@ -1150,7 +1102,7 @@ export default function QuestionnairePage() {
         </div>
       </section>
 
-      <div style={{ marginTop: '1.5rem' }}>
+      <div className="app-actions-row mt-4">
         <button type="button" className="btn" onClick={handleSave} disabled={saving}>
           {saving ? 'Saving…' : 'Save preferences'}
         </button>

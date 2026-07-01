@@ -501,40 +501,32 @@ export default function GeniusPage() {
   }
 
   return (
-    <div className="mt-8">
+    <div className="app-page">
       {!user ? (
-        <p className="mt-4">
+        <p className="page-lead">
           Please <a href="/login">log in</a> to generate recipes.
         </p>
       ) : (
         <>
-          <h1
-            style={{ fontSize: '1.5rem', fontWeight: 600, marginBottom: '1rem' }}
-          >
-            Genius Recipe Generator
-          </h1>
-          {error && (
-            <p style={{ color: 'var(--error-color)', marginBottom: '1rem' }}>{error}</p>
-          )}
-          <div style={{ maxWidth: '320px', display: 'flex', flexDirection: 'column' }}>
-            <label className="mb-1">Suggest mode</label>
-            <div style={{ marginBottom: '0.5rem' }}>
+          <h1 className="page-title">Genius</h1>
+          <p className="page-lead">Generate recipes from what&apos;s in your fridge.</p>
+          {error && <p className="app-message app-message--error">{error}</p>}
+          <div className="app-section app-section--narrow">
+            <div className="app-checkbox-row mb-2">
               <input
                 type="checkbox"
                 id="suggestMode"
                 checked={suggestMode}
                 onChange={(e) => {
-                  // Only update suggestMode for the next generation. Do not
-                  // alter the current recipe or its missing items. Do not
-                  // reset addedToShopping here.
                   setSuggestMode(e.target.checked);
                 }}
               />
-              <label htmlFor="suggestMode" style={{ marginLeft: '0.5rem' }}>
+              <label htmlFor="suggestMode" className="app-label">
                 Suggest recipes even if you need to buy extra ingredients
               </label>
             </div>
-            <label className="mb-1">Meal type</label>
+            <div className="app-field">
+              <label className="app-label">Meal type</label>
             <select
               value={selectedMealType ?? undefined}
               onChange={(e) => setSelectedMealType(parseInt(e.target.value))}
@@ -545,7 +537,9 @@ export default function GeniusPage() {
                 </option>
               ))}
             </select>
-            <label className="mb-1 mt-2">Number of portions</label>
+            </div>
+            <div className="app-field">
+              <label className="app-label">Number of portions</label>
             <input
               type="text"
               inputMode="numeric"
@@ -556,60 +550,45 @@ export default function GeniusPage() {
                 else setPortions(Math.max(1, parseInt(v, 10) || 1));
               }}
             />
+            </div>
             <button
               onClick={handleGenerate}
               disabled={loading || fridgeItems.length === 0}
-              className="btn"
-              style={{ marginTop: '1rem' }}
+              className="btn mt-2"
             >
               {loading ? 'Generating…' : 'Generate'}
             </button>
           </div>
           {recipe && (
-            <div
-              style={{
-                marginTop: '1.5rem',
-                backgroundColor: 'var(--surface-color)',
-                border: '1px solid var(--border-color)',
-                borderRadius: '6px',
-                padding: '1rem'
-              }}
-            >
-              <h2
-                style={{ fontSize: '1.25rem', fontWeight: 600, marginBottom: '0.5rem' }}
-              >
-                {recipe.title}
-              </h2>
-              <h3 style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Ingredients</h3>
-              <ul style={{ paddingLeft: '1.25rem', marginBottom: '0.75rem' }}>
+            <div className="app-detail-panel">
+              <h2 className="app-detail-title">{recipe.title}</h2>
+              <h3 className="app-detail-subtitle">Ingredients</h3>
+              <ul className="app-ingredient-list app-ingredient-list--spaced">
                 {recipe.ingredients.map((ing, idx) => (
                   <li key={idx}>
                     <span
-                      style={{
-                        color:
-                          currentSuggest &&
-                          missing.find((m) => m.name.toLowerCase() === ing.name.toLowerCase())
-                            ? 'var(--error-color)'
-                            : undefined
-                      }}
+                      className={
+                        currentSuggest &&
+                        missing.find((m) => m.name.toLowerCase() === ing.name.toLowerCase())
+                          ? 'text-danger'
+                          : undefined
+                      }
                     >
                       {ing.quantity} {ing.name}
                     </span>
                   </li>
                 ))}
               </ul>
-              <h3 style={{ fontWeight: 500, marginBottom: '0.25rem' }}>Steps</h3>
-              <ol style={{ paddingLeft: '1.25rem' }}>
+              <h3 className="app-detail-subtitle">Steps</h3>
+              <ol className="app-step-list">
                 {recipe.steps.map((step, idx) => (
-                  <li key={idx} style={{ marginBottom: '0.5rem' }}>
-                    {step}
-                  </li>
+                  <li key={idx}>{step}</li>
                 ))}
               </ol>
               {currentSuggest && missing.length > 0 && (
-                <div style={{ marginTop: '1rem' }}>
-                  <h4 style={{ marginBottom: '0.25rem' }}>Missing ingredients</h4>
-                  <ul style={{ paddingLeft: '1.25rem', marginBottom: '0.5rem' }}>
+                <div className="app-subsection">
+                  <h4 className="app-subsection-title">Missing ingredients</h4>
+                  <ul className="app-ingredient-list mb-2">
                     {missing.map((m, idx) => (
                       <li key={idx}>
                         {m.quantity} {m.unit} {m.name}
@@ -626,10 +605,10 @@ export default function GeniusPage() {
                 </div>
               )}
               {recipeId && (
-                <div style={{ marginTop: '1rem' }}>
-                  <h4 style={{ marginBottom: '0.25rem' }}>Leave Feedback</h4>
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <label style={{ marginRight: '0.5rem' }}>Rating:</label>
+                <div className="app-feedback">
+                  <h4 className="app-feedback-title">Leave feedback</h4>
+                  <div className="app-feedback-row">
+                    <label className="app-label">Rating</label>
                     <select
                       value={rating}
                       onChange={(e) => {
@@ -645,17 +624,16 @@ export default function GeniusPage() {
                       ))}
                     </select>
                   </div>
-                  <div style={{ marginBottom: '0.5rem' }}>
-                    <label style={{ display: 'block', marginBottom: '0.25rem' }}>Feedback:</label>
+                  <div className="app-field mb-2">
+                    <label className="app-label">Feedback</label>
                     <textarea
                       value={feedback}
                       onChange={(e) => setFeedback(e.target.value)}
                       rows={3}
-                      style={{ width: '100%', resize: 'vertical' }}
                     />
                   </div>
                   <button className="btn" onClick={handleSaveFeedback}>
-                    Save Feedback
+                    Save feedback
                   </button>
                 </div>
               )}
