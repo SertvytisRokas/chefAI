@@ -253,5 +253,7 @@ INSERT INTO public.recipe_templates (title, content, embedding) VALUES
     'Mango Salsa Chicken',
     'Ingredients: Chicken thighs, Mango (diced), Red onion (finely chopped), Cilantro (chopped), Lime juice, Jalapeño (minced), Salt and pepper to taste, Cooked rice for serving.\nSteps: Season chicken thighs with salt and pepper. Grill or bake chicken until fully cooked. In a bowl, combine diced mango, chopped red onion, cilantro, minced jalapeño, and lime juice. Dice the cooked chicken and mix it with the mango salsa. Serve over cooked rice.',
     NULL
-  )
-;
+  );
+
+-- Curated blog articles (external links): see scripts/blog-articles.sql
+-- for additive migration + seed data on an existing Supabase project.

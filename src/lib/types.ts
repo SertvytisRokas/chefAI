@@ -164,6 +164,81 @@ export interface Database {
           steps?: any;
         };
       };
+      blog_genres: {
+        Row: {
+          id: number;
+          name: string;
+          slug: string;
+          sort_order: number;
+        };
+        Insert: {
+          id?: number;
+          name: string;
+          slug: string;
+          sort_order?: number;
+        };
+        Update: {
+          name?: string;
+          slug?: string;
+          sort_order?: number;
+        };
+      };
+      blog_articles: {
+        Row: {
+          id: number;
+          title: string;
+          excerpt: string | null;
+          external_url: string;
+          image_url: string | null;
+          source_name: string | null;
+          verified: boolean;
+          is_published: boolean;
+          featured: boolean;
+          sort_order: number;
+          published_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          title: string;
+          excerpt?: string | null;
+          external_url: string;
+          image_url?: string | null;
+          source_name?: string | null;
+          verified?: boolean;
+          is_published?: boolean;
+          featured?: boolean;
+          sort_order?: number;
+          published_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          title?: string;
+          excerpt?: string | null;
+          external_url?: string;
+          image_url?: string | null;
+          source_name?: string | null;
+          verified?: boolean;
+          is_published?: boolean;
+          featured?: boolean;
+          sort_order?: number;
+          published_at?: string | null;
+        };
+      };
+      blog_article_genres: {
+        Row: {
+          article_id: number;
+          genre_id: number;
+        };
+        Insert: {
+          article_id: number;
+          genre_id: number;
+        };
+        Update: {
+          article_id?: number;
+          genre_id?: number;
+        };
+      };
     };
   };
 }

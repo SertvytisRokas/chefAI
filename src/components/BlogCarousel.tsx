@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useState } from 'react';
+import type { BlogArticle } from '../lib/blog';
 
-export type BlogPost = {
-  slug: string;
-  title: string;
-  excerpt: string;
-  hue: number;
-};
+export type BlogCarouselPost = Pick<
+  BlogArticle,
+  'id' | 'title' | 'excerpt' | 'external_url' | 'image_url'
+>;
 
 const PER_PAGE = 3;
 const AUTO_MS = 5000;
@@ -40,15 +39,15 @@ function ChevronRight() {
   );
 }
 
-function chunkPosts(posts: BlogPost[], perPage: number): BlogPost[][] {
-  const pages: BlogPost[][] = [];
+function chunkPosts(posts: BlogCarouselPost[], perPage: number): BlogCarouselPost[][] {
+  const pages: BlogCarouselPost[][] = [];
   for (let i = 0; i < posts.length; i += perPage) {
     pages.push(posts.slice(i, i + perPage));
   }
   return pages;
 }
 
-export default function BlogCarousel({ posts }: { posts: BlogPost[] }) {
+export default function BlogCarousel({ posts }: { posts: BlogCarouselPost[] }) {
   const pages = chunkPosts(posts, PER_PAGE);
   const pageCount = pages.length;
   const [page, setPage] = useState(0);
@@ -65,6 +64,14 @@ export default function BlogCarousel({ posts }: { posts: BlogPost[] }) {
     }, AUTO_MS);
     return () => clearInterval(id);
   }, [paused, pageCount, page]);
+
+  if (posts.length === 0) {
+    return (
+      <p className="blog-carousel-empty text-muted">
+        Articles coming soon — browse the full library on the Articles page.
+      </p>
+    );
+  }
 
   return (
     <div
@@ -87,26 +94,35 @@ export default function BlogCarousel({ posts }: { posts: BlogPost[] }) {
           <div
             className="blog-carousel-track"
             style={{
-              transform: `translateX(calc(-${page} * (100cqw + var(--blog-carousel-gap))))`,
+              transform: `translateX(calc(-${page} * (100cqw + var(--blog-carousel-gap))))`
             }}
           >
             {pages.map((slidePosts, slideIdx) => (
               <div key={slideIdx} className="blog-carousel-slide">
                 {slidePosts.map((post) => (
                   <a
-                    key={post.slug}
-                    href={`/blog/${post.slug}`}
+                    key={post.id}
+                    href={post.external_url}
                     className="blog-card"
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    <div
-                      className="blog-card-image"
-                      style={{
-                        background: `linear-gradient(135deg, hsl(${post.hue} 35% 22%) 0%, hsl(${post.hue} 25% 12%) 100%)`,
-                      }}
-                    />
+                    {post.image_url ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={post.image_url}
+                        alt=""
+                        className="blog-card-image blog-card-image--photo"
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className="blog-card-image blog-card-image--placeholder" />
+                    )}
                     <div className="blog-card-body">
                       <h3 className="blog-card-title">{post.title}</h3>
-                      <p className="blog-card-excerpt">{post.excerpt}</p>
+                      {post.excerpt && (
+                        <p className="blog-card-excerpt">{post.excerpt}</p>
+                      )}
                     </div>
                   </a>
                 ))}

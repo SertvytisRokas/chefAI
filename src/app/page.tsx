@@ -2,96 +2,58 @@ import Link from 'next/link';
 import FoodWasteCounters from '../components/FoodWasteCounters';
 import BlogCarousel from '../components/BlogCarousel';
 import LandingScrollLink from '../components/LandingScrollLink';
-
-const BLOG_PLACEHOLDERS = [
-  {
-    slug: 'scale-of-global-food-waste',
-    title: 'The scale of global food waste',
-    excerpt:
-      'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore.',
-    hue: 145,
-  },
-  {
-    slug: 'household-habits-that-help',
-    title: 'Household habits that help',
-    excerpt:
-      'Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo.',
-    hue: 155,
-  },
-  {
-    slug: 'why-expiry-dates-matter',
-    title: 'Why expiry dates matter',
-    excerpt:
-      'Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla.',
-    hue: 130,
-  },
-  {
-    slug: 'cooking-from-what-you-have',
-    title: 'Cooking from what you have',
-    excerpt:
-      'Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim.',
-    hue: 165,
-  },
-  {
-    slug: 'the-cost-of-throwing-away-food',
-    title: 'The cost of throwing away food',
-    excerpt:
-      'Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium.',
-    hue: 140,
-  },
-  {
-    slug: 'small-changes-big-impact',
-    title: 'Small changes, big impact',
-    excerpt:
-      'Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur.',
-    hue: 150,
-  },
-];
+import { fetchBlogArticles } from '../lib/blog';
 
 const FEATURES = [
   {
     title: 'Fridge inventory',
-    text: 'Track quantities, units, and expiry dates so soon-to-spoil items surface before they hit the bin.',
+    text: 'Track quantities, units, and expiry dates so soon-to-spoil items surface before they hit the bin.'
   },
   {
     title: 'Recipe Genius',
-    text: 'Generate a custom recipe on demand from whatever is in your fridge right now.',
+    text: 'Generate a custom recipe on demand from whatever is in your fridge right now.'
   },
   {
     title: 'Weekly meal plans',
-    text: 'Plan breakfast, lunch, and dinner for seven days, prioritising ingredients closest to expiring.',
+    text: 'Plan breakfast, lunch, and dinner for seven days, prioritising ingredients closest to expiring.'
   },
   {
     title: 'Deep personalization',
-    text: 'Diet, allergens, likes and dislikes, religious and cultural rules, cuisines, portions, time, and budget.',
+    text: 'Diet, allergens, likes and dislikes, religious and cultural rules, cuisines, portions, time, and budget.'
   },
   {
     title: 'Strict or suggest mode',
-    text: 'Cook with only what you have, or allow small gaps and send missing items to your shopping list.',
+    text: 'Cook with only what you have, or allow small gaps and send missing items to your shopping list.'
   },
   {
     title: 'Shopping list',
-    text: 'Collect missing ingredients from suggest-mode recipes and move purchased items into your fridge.',
+    text: 'Collect missing ingredients from suggest-mode recipes and move purchased items into your fridge.'
   },
   {
     title: 'History & favourites',
-    text: 'Save recipes, rate them, and keep favourites — your personal cookbook grows as you cook.',
+    text: 'Save recipes, rate them, and keep favourites — your personal cookbook grows as you cook.'
   },
   {
     title: 'Adaptive assistant',
-    text: 'Learns from your ratings and optional comments, spotting patterns in what you love so future recipes improve over time.',
+    text: 'Learns from your ratings and optional comments, spotting patterns in what you love so future recipes improve over time.'
   },
   {
     title: 'Expiry-first cooking',
-    text: 'Plans and recipes surface ingredients about to expire first, so nothing gets forgotten at the back of the fridge.',
-  },
+    text: 'Plans and recipes surface ingredients about to expire first, so nothing gets forgotten at the back of the fridge.'
+  }
 ];
 
 /**
  * Public landing page — hero, food-waste awareness, blog previews,
  * features, and footer. All sections scroll on this single page.
  */
-export default function HomePage() {
+export default async function HomePage() {
+  const carouselPosts = await fetchBlogArticles({ limit: 6, featured: true });
+  const posts =
+    carouselPosts.length > 0
+      ? carouselPosts
+      : await fetchBlogArticles({ limit: 6 });
+
   return (
     <div className="landing">
       {/* Hero — exactly one viewport below the header */}
@@ -142,7 +104,7 @@ export default function HomePage() {
             Articles on food waste, sustainable cooking, and practical tips for
             making the most of what you already have.
           </p>
-          <BlogCarousel posts={BLOG_PLACEHOLDERS} />
+          <BlogCarousel posts={posts} />
           <div className="blog-read-more">
             <Link href="/blog" className="btn btn-landing-primary btn-lg">
               Read more
