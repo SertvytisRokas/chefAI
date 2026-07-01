@@ -97,30 +97,3 @@ export async function getSignupEmailStatus(email: string): Promise<SignupEmailSt
   if (!isUnconfirmedExpired(user)) return 'pending_verification';
   return 'available';
 }
-
-/** Batch-delete all expired unconfirmed users (for scheduled cron). */
-export async function cleanupAllStaleUnconfirmedUsers(): Promise<number> {
-  const supabase = supabaseAdmin();
-  const now = Date.now();
-  let deleted = 0;
-  let page = 1;
-  const perPage = 1000;
-
-  while (page <= 20) {
-    const { data, error } = await supabase.auth.admin.listUsers({ page, perPage });
-    if (error) throw error;
-
-    for (const user of data.users) {
-      if (isUserConfirmed(user)) continue;
-      const created = user.created_at ? new Date(user.created_at).getTime() : 0;
-      if (!created || now - created < UNCONFIRMED_SIGNUP_TTL_MS) continue;
-      const { error: delError } = await supabase.auth.admin.deleteUser(user.id);
-      if (!delError) deleted += 1;
-    }
-
-    if (data.users.length < perPage) break;
-    page += 1;
-  }
-
-  return deleted;
-}
