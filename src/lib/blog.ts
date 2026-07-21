@@ -1,5 +1,7 @@
 import { supabaseServer } from './supabase/server';
 
+export { BLOG_CAROUSEL_MAX_FEATURED, BLOG_CAROUSEL_PER_PAGE } from './blogConstants';
+
 export type BlogGenre = {
   id: number;
   name: string;

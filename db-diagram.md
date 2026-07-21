@@ -80,3 +80,9 @@ recipes. Lookup tables for diets, meal types and measurement units allow you to
 add or modify available options without changing application code. Recipe
 templates live in their own table and are used for retrieval‑augmented
 generation (RAG) to ground the model’s responses.
+
+**Note:** this diagram is partial and doesn't yet cover `meal_plans`,
+`shopping_list`, `user_personalization`, or the blog tables (`blog_articles`,
+`blog_genres`, `blog_article_genres`, defined in `scripts/blog-articles.sql`).
+All user-owned tables are protected by Row Level Security policies
+(`scripts/enable-rls.sql`) — every row is scoped to `auth.uid() = user_id`.

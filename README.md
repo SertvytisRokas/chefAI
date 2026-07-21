@@ -10,6 +10,7 @@ A Next.js app that suggests recipes and weekly meal plans from ingredients you h
 - **Personalization** – Questionnaire for diet, health goals, cuisines, and cooking habits; answers are used when generating recipes
 - **History** – View and manage saved recipes
 - **Shopping** – Shopping list support
+- **Blog** – Curated library of external articles on food waste and cooking, with genre filtering and a featured carousel on the landing page
 
 Recipes are powered by RAG over stored recipe templates and your fridge contents. Diet type (vegan/vegetarian/pescatarian/omnivore) is inferred by the model and stored with each recipe.
 
@@ -42,7 +43,11 @@ Recipes are powered by RAG over stored recipe templates and your fridge contents
 
    Fill in Supabase URL and keys, `OPENROUTER_API_KEY`, `OPENROUTER_CHAT_MODEL`, and `OPENROUTER_EMBEDDING_MODEL` (see `.env.example` for suggested defaults).
 
-3. Apply the database schema in the Supabase SQL editor (see `postgres-schema.sql`).
+3. Apply the database schema in the Supabase SQL editor (see `postgres-schema.sql`). **This script drops and recreates every table — only run it on a fresh project, never against one with existing data.**
+
+   For an existing project, instead apply the additive migrations individually:
+   - `scripts/blog-articles.sql` – blog tables + seed content
+   - `scripts/enable-rls.sql` – Row Level Security policies (required so users can't read/write each other's data; safe to re-run anytime)
 
 4. **Seed recipe template embeddings** (one-time, enables vector RAG):
 
@@ -81,12 +86,14 @@ Recipes are powered by RAG over stored recipe templates and your fridge contents
 
 ## Project layout
 
-- `src/app/` – App Router pages (fridge, genius, weekly, questionnaire, history, shopping, profile, login)
-- `src/components/` – Shared UI (NavBar, SideNav, Modal, etc.)
-- `src/lib/` – Auth, OpenRouter client, RAG, personalization, types
+- `src/app/` – App Router pages (fridge, genius, weekly, questionnaire, history, shopping, profile, login, blog, auth/callback, auth/confirmed)
+- `src/components/` – Shared UI (AppShell, LandingHeader, UserMenu, SideNav, Modal, BlogCarousel, etc.)
+- `src/lib/` – Auth, OpenRouter client, RAG, personalization, blog, types
 - `src/app/api/generate/` – Recipe generation API
 - `src/app/api/generate-weekly/` – Weekly plan generation API
-- `postgres-schema.sql` – Supabase/Postgres schema and RAG function
+- `src/app/api/auth/check-email/` – Signup email status check (duplicate/pending detection)
+- `postgres-schema.sql` – Supabase/Postgres schema and RAG function (fresh installs only)
+- `scripts/blog-articles.sql`, `scripts/enable-rls.sql` – Additive migrations for an existing project
 
 ## Deploying (e.g. Vercel)
 

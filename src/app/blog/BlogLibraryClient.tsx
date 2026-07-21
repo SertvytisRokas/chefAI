@@ -62,16 +62,33 @@ export default function BlogLibraryClient({
 }) {
   const [search, setSearch] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('newest');
-  const [genreFilter, setGenreFilter] = useState<number | 'all'>('all');
+  const [selectedGenreIds, setSelectedGenreIds] = useState<Set<number>>(() => new Set());
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     let list = articles.filter((a) => articleMatchesSearch(a, q));
-    if (genreFilter !== 'all') {
-      list = list.filter((a) => a.genres.some((g) => g.id === genreFilter));
+    if (selectedGenreIds.size > 0) {
+      list = list.filter((a) =>
+        a.genres.some((g) => selectedGenreIds.has(g.id))
+      );
     }
     return sortArticles(list, sortKey);
-  }, [articles, search, sortKey, genreFilter]);
+  }, [articles, search, sortKey, selectedGenreIds]);
+
+  function selectAllGenres() {
+    setSelectedGenreIds(new Set());
+  }
+
+  function toggleGenre(id: number) {
+    setSelectedGenreIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const showingFiltered = search.trim().length > 0 || selectedGenreIds.size > 0;
 
   return (
     <div className="app-page blog-library">
@@ -110,34 +127,14 @@ export default function BlogLibraryClient({
             <option value="source">Source</option>
           </select>
         </div>
-        <div className="app-field app-field--inline">
-          <label className="app-label" htmlFor="blog-genre">
-            Genre
-          </label>
-          <select
-            id="blog-genre"
-            value={genreFilter === 'all' ? 'all' : String(genreFilter)}
-            onChange={(e) => {
-              const val = e.target.value;
-              setGenreFilter(val === 'all' ? 'all' : parseInt(val, 10));
-            }}
-          >
-            <option value="all">All genres</option>
-            {genres.map((g) => (
-              <option key={g.id} value={g.id}>
-                {g.name}
-              </option>
-            ))}
-          </select>
-        </div>
       </div>
 
       {genres.length > 0 && (
         <div className="blog-genre-chips" role="group" aria-label="Filter by genre">
           <button
             type="button"
-            className={`app-chip${genreFilter === 'all' ? ' active' : ''}`}
-            onClick={() => setGenreFilter('all')}
+            className={`app-chip${selectedGenreIds.size === 0 ? ' active' : ''}`}
+            onClick={selectAllGenres}
           >
             All
           </button>
@@ -145,8 +142,9 @@ export default function BlogLibraryClient({
             <button
               key={g.id}
               type="button"
-              className={`app-chip${genreFilter === g.id ? ' active' : ''}`}
-              onClick={() => setGenreFilter(g.id)}
+              className={`app-chip${selectedGenreIds.has(g.id) ? ' active' : ''}`}
+              onClick={() => toggleGenre(g.id)}
+              aria-pressed={selectedGenreIds.has(g.id)}
             >
               {g.name}
             </button>
@@ -216,7 +214,7 @@ export default function BlogLibraryClient({
 
       <p className="blog-library-footnote text-muted text-sm">
         {filtered.length} of {articles.length} article{articles.length === 1 ? '' : 's'}
-        {search || genreFilter !== 'all' ? ' shown' : ''}
+        {showingFiltered ? ' shown' : ''}
       </p>
     </div>
   );

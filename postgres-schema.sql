@@ -255,5 +255,75 @@ INSERT INTO public.recipe_templates (title, content, embedding) VALUES
     NULL
   );
 
+-- ── Row Level Security ──────────────────────────────────────────────────────
+-- Per-user tables: owner-only access via auth.uid() = user_id. Lookup tables:
+-- public read (writes go through service role / SQL editor, which bypasses
+-- RLS). See scripts/enable-rls.sql for the standalone, safe-to-re-run version
+-- to apply against an existing Supabase project without dropping tables.
+
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.profiles
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.recipes ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.recipes
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.fridge_items ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.fridge_items
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.user_allergens ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.user_allergens
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.user_preferences ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.user_preferences
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.meal_plans ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.meal_plans
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.shopping_list ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.shopping_list
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.user_personalization ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Owner full access" ON public.user_personalization
+  FOR ALL TO authenticated
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+ALTER TABLE public.diet_types ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON public.diet_types
+  FOR SELECT TO anon, authenticated USING (true);
+
+ALTER TABLE public.meal_types ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON public.meal_types
+  FOR SELECT TO anon, authenticated USING (true);
+
+ALTER TABLE public.measurement_types ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON public.measurement_types
+  FOR SELECT TO anon, authenticated USING (true);
+
+ALTER TABLE public.recipe_templates ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Public read" ON public.recipe_templates
+  FOR SELECT TO anon, authenticated USING (true);
+
 -- Curated blog articles (external links): see scripts/blog-articles.sql
 -- for additive migration + seed data on an existing Supabase project.

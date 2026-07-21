@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import type { BlogArticle } from '../lib/blog';
+import { BLOG_CAROUSEL_PER_PAGE } from '../lib/blogConstants';
 
 export type BlogCarouselPost = Pick<
   BlogArticle,
   'id' | 'title' | 'excerpt' | 'external_url' | 'image_url'
 >;
 
-const PER_PAGE = 3;
+const PER_PAGE = BLOG_CAROUSEL_PER_PAGE;
 const AUTO_MS = 5000;
 
 function ChevronLeft() {
@@ -56,6 +57,10 @@ export default function BlogCarousel({ posts }: { posts: BlogCarouselPost[] }) {
   const goPrev = () => setPage((p) => (p <= 0 ? pageCount - 1 : p - 1));
   const goNext = () => setPage((p) => (p >= pageCount - 1 ? 0 : p + 1));
   const goTo = (i: number) => setPage(i);
+
+  useEffect(() => {
+    setPage((p) => (p >= pageCount ? Math.max(0, pageCount - 1) : p));
+  }, [pageCount]);
 
   useEffect(() => {
     if (paused || pageCount <= 1) return;

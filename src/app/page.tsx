@@ -3,6 +3,7 @@ import FoodWasteCounters from '../components/FoodWasteCounters';
 import BlogCarousel from '../components/BlogCarousel';
 import LandingScrollLink from '../components/LandingScrollLink';
 import { fetchBlogArticles } from '../lib/blog';
+import { BLOG_CAROUSEL_MAX_FEATURED } from '../lib/blogConstants';
 
 const FEATURES = [
   {
@@ -48,11 +49,10 @@ const FEATURES = [
  * features, and footer. All sections scroll on this single page.
  */
 export default async function HomePage() {
-  const carouselPosts = await fetchBlogArticles({ limit: 6, featured: true });
-  const posts =
-    carouselPosts.length > 0
-      ? carouselPosts
-      : await fetchBlogArticles({ limit: 6 });
+  const posts = await fetchBlogArticles({
+    featured: true,
+    limit: BLOG_CAROUSEL_MAX_FEATURED
+  });
 
   return (
     <div className="landing">
