@@ -67,8 +67,22 @@ Rules:
 - Use "question" only if you genuinely cannot proceed without asking. Otherwise null.
 - You do NOT calculate what is left. The app subtracts. Report only what was consumed.
 
-Output ONLY this JSON, no commentary, no markdown fences:
-{"deduct":[{"i":<fridge id>,"amt":<number>,"why":"<max 8 words>"}],"unmatched":["<ingredient name>"],"question":null}`;
+Reply with ONLY a JSON object. No commentary, no markdown fences, no explanation.
+
+The object has exactly three fields:
+- "deduct": a list. Each entry has "i" (a fridge id number from the list), "amt" (a number), and "why" (at most 8 words).
+- "unmatched": a list of recipe ingredient names, as plain strings.
+- "question": a string, or null.
+
+Worked example. If the recipe used "2 cloves garlic", "300 g rice" and "a pinch of salt",
+and the FRIDGE list contained:
+1|garlic|1|bulb
+2|rice|500|grams
+then the correct reply is exactly:
+{"deduct":[{"i":1,"amt":0.15,"why":"2 cloves of one bulb"},{"i":2,"amt":300,"why":"used as listed"}],"unmatched":["salt"],"question":null}
+
+Reply in that exact shape, using real numbers for the recipe you are given.
+Never output angle brackets, placeholders, or field descriptions — only real values.`;
 
 function truncate(value: string, max: number): string {
   const trimmed = value.trim();
@@ -224,7 +238,19 @@ export async function resolveCookDeductions(
     SYSTEM_PROMPT,
     buildUserPrompt(recipeTitle, usableIngredients, candidates, diet)
   );
-  const parsed = parseJsonFromModelResponse<RawScribeOutput>(raw, 'deduction plan');
+
+  let parsed: RawScribeOutput;
+  try {
+    parsed = parseJsonFromModelResponse<RawScribeOutput>(raw, 'deduction plan');
+  } catch {
+    // Weak models sometimes echo the example structure instead of filling it in,
+    // or wrap the object in prose. Neither is recoverable here, and the raw
+    // parser error ("Unexpected token '<'") tells the user nothing useful.
+    throw new Error(
+      'The Scribe model did not return usable JSON. Try again, or set OPENROUTER_SCRIBE_MODEL ' +
+        'to a model that reliably follows structured output.'
+    );
+  }
 
   // Everything below re-validates the model's output. An index we did not issue,
   // a non-numeric amount, or a non-positive amount is dropped silently.

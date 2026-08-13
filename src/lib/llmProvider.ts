@@ -54,14 +54,25 @@ function buildPrompt(
     ? 'You may include a small number of additional ingredients (no more than 30% of the total) if necessary to create a delicious meal. You must prioritise using the available ingredients and avoid suggesting ingredients that are very similar to existing ones (for example, avoid proposing red onion if you have onion or Arborio rice if you have rice).'
     : 'Use ONLY the ingredients provided. Do not hallucinate or invent additional ingredients. If a traditional recipe uses an ingredient you do not have, adapt the recipe to use a similar available ingredient (e.g., toast the bread you have instead of asking for toast bread).';
 
+  // With no saved profile the model has no anchor for how much food a person
+  // eats, and free models drift toward large, elaborate dishes. Give it one.
   const personalizationBlock = personalizationContext
     ? `\n${personalizationContext} Adjust portion sizes and calories based on the user profile when relevant.\n`
-    : '';
+    : '\nNo user profile is saved. Use normal, realistic portions for one average adult per serving, and keep the dish to something an ordinary home cook would actually make on a weekday.\n';
 
   return `You are an expert chef. ${missingInstruction}
 ${diet} ${allergens} ${likes} ${dislikes}${personalizationBlock}
 The available ingredients are: ${ingredientsList}.
-Generate a ${mealText} recipe for ${portionText}. Provide very detailed, step-by-step instructions that fully describe the preparation and cooking process. Each step should focus on one distinct action (for example: chopping, mixing, preheating, cooking, assembling or serving) and you must not compress multiple actions into a single step. The instructions should be as long as necessary to cover all important actions — do not limit yourself to three steps. Avoid generic phrases such as "for each serving"; instead, write instructions that explicitly refer to the specified number of portions and the actual actions to perform.
+Generate a ${mealText} recipe for ${portionText}.
+
+Instructions — aim for the balance a good recipe book strikes:
+- Use 5 to 9 steps for a simple dish. Only a genuinely complex dish should go higher, and never write more than 12 steps.
+- Each step is one distinct action. Do not merge several actions into one step.
+- Do not pad the count. Omit obvious or trivial steps entirely ("wash the vegetables", "gather your ingredients", "clean the mushrooms") — fold them into the step that uses them.
+- Keep each step to one or two sentences, and state times and temperatures where they matter.
+- Prefer the straightforward version of a dish over an elaborate one unless the user asked for elaborate.
+
+Write quantities for exactly ${portionText}. Avoid generic phrases such as "for each serving".
 Format your response as JSON with the keys: title (string), ingredients (array of objects with "name" and "quantity" fields), steps (array of strings), and dietType (string). For dietType you must choose exactly one of: vegan, vegetarian, pescatarian, omnivore — based on the ingredients and preparation of this recipe (vegan: no animal products; vegetarian: may include dairy/eggs but no meat or fish; pescatarian: may include fish/seafood but no meat; omnivore: may include meat). The JSON must be strictly valid (no trailing commas) and use double quotes for all keys and string values. Do not include any commentary outside the JSON.
 
 Here are some similar recipes for inspiration:
@@ -134,7 +145,7 @@ export async function generateWeeklyPlan(
   const personalizationContext = buildPersonalizationContext(personalization);
   const personalizationBlock = personalizationContext
     ? `\n${personalizationContext} Adjust portion sizes and recipe style based on the user profile.\n`
-    : '';
+    : '\nNo user profile is saved. Use normal, realistic portions for one average adult per serving, and keep meals to what an ordinary home cook would make on a weekday.\n';
   const templatesText = templates
     .map((t) => `### Template: ${t.title}\n${t.content}`)
     .join('\n\n');
@@ -149,7 +160,7 @@ export async function generateWeeklyPlan(
     `The available ingredients are: ${fridgeSummary}.\n` +
     `Create a seven‑day meal plan (Monday through Sunday) with breakfast, lunch and dinner each day.\n` +
     `The plan should prioritise using ingredients that will expire soon and avoid suggesting meals that require many additional ingredients.\n` +
-    `Each meal should include clear, step-by-step instructions covering all key actions such as prepping, cooking and serving. Each step should describe a single distinct action and you must not compress multiple actions into one step. The instructions should be as long as necessary to cover all important actions — do not limit yourself to three steps. Avoid generic phrases like \"for each serving\"; instead tailor instructions to the number of portions.\n` +
+    `Each meal needs clear step-by-step instructions. Because this response covers 21 meals, keep every meal tight: 4 to 7 steps, never more than 8. Each step is one distinct action — do not merge several actions into one step, and do not pad with trivial steps like "wash the vegetables" or "gather your ingredients". One or two sentences per step. Avoid generic phrases like \"for each serving\"; tailor instructions to the number of portions.\n` +
     `Output JSON with a single key \"week\" which is an array of objects. Each object has a \"day\" string and a \"meals\" array. Each meal has \"mealType\" (breakfast, lunch, dinner), \"title\", \"ingredients\" (array of {name, quantity}), \"steps\" (array of strings), and \"dietType\" (string). For dietType of each meal you must choose exactly one of: vegan, vegetarian, pescatarian, omnivore — based on the ingredients and preparation of that meal (vegan: no animal products; vegetarian: may include dairy/eggs but no meat or fish; pescatarian: may include fish/seafood but no meat; omnivore: may include meat). Do not include any commentary outside the JSON.\n\n` +
     `Here are some similar recipes for inspiration:\n${templatesText}\n\nJSON:`;
 
