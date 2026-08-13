@@ -11,10 +11,10 @@ function requireApiKey(): string {
   return key;
 }
 
-function openRouterHeaders(): Record<string, string> {
+function openRouterHeaders(apiKey?: string): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${requireApiKey()}`,
+    Authorization: `Bearer ${apiKey || requireApiKey()}`,
     'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     'X-Title': 'chefAI'
   };
@@ -51,6 +51,54 @@ export async function openRouterChatCompletion(
   const content = data.choices?.[0]?.message?.content;
   if (typeof content !== 'string' || !content.trim()) {
     throw new Error('OpenRouter chat returned an empty response');
+  }
+  return content;
+}
+
+/**
+ * Sends a bounded, low-cost completion to the Kitchen Scribe model.
+ *
+ * Kept separate from `openRouterChatCompletion` on purpose: the Scribe runs on
+ * every cook, so it uses a cheap model, a hard output cap, temperature 0 for
+ * repeatability, and an optional dedicated API key so its spend can be tracked
+ * or capped independently of recipe generation.
+ */
+export async function openRouterScribeCompletion(
+  systemPrompt: string,
+  userPrompt: string,
+  maxTokens = 700
+): Promise<string> {
+  const model = process.env.OPENROUTER_SCRIBE_MODEL;
+  if (!model) {
+    throw new Error(
+      'OPENROUTER_SCRIBE_MODEL is not set. Point it at a cheap model to enable cook-to-fridge deduction.'
+    );
+  }
+  const apiKey = process.env.OPENROUTER_SCRIBE_API_KEY || undefined;
+
+  const resp = await fetch(OPENROUTER_CHAT_URL, {
+    method: 'POST',
+    headers: openRouterHeaders(apiKey),
+    body: JSON.stringify({
+      model,
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      temperature: 0,
+      max_tokens: maxTokens
+    })
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text();
+    throw new Error(`Kitchen Scribe request failed (${resp.status}): ${errText}`);
+  }
+
+  const data = await resp.json();
+  const content = data.choices?.[0]?.message?.content;
+  if (typeof content !== 'string' || !content.trim()) {
+    throw new Error('Kitchen Scribe returned an empty response');
   }
   return content;
 }

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useSupabase, useUser } from '../../components/SupabaseProvider';
+import CookedThis from '../../components/CookedThis';
 import type { RecipeResult } from '../../lib/llmTypes';
 import { preferencesFromPersonalization } from '../../lib/personalization';
 import type { PersonalizationAnswers } from '../../lib/personalization';
@@ -486,6 +487,20 @@ export default function GeniusPage() {
     }
   }
 
+  // Re-read the fridge after cooking so the page reflects the new quantities.
+  async function refreshFridgeItems() {
+    if (!user) return;
+    const { data: items, error: refreshError } = await supabase
+      .from('fridge_items')
+      .select('*')
+      .eq('user_id', user.id);
+    if (refreshError) {
+      setError(refreshError.message);
+      return;
+    }
+    setFridgeItems(items || []);
+  }
+
   // Save feedback for a single recipe generated on this page
   async function handleSaveFeedback() {
     if (!user || !recipeId) return;
@@ -585,6 +600,8 @@ export default function GeniusPage() {
                   <li key={idx}>{step}</li>
                 ))}
               </ol>
+              {/* Closes the maintenance loop: cooking deducts from the fridge. */}
+              <CookedThis recipeId={recipeId} onApplied={refreshFridgeItems} />
               {currentSuggest && missing.length > 0 && (
                 <div className="app-subsection">
                   <h4 className="app-subsection-title">Missing ingredients</h4>

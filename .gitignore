@@ -46,3 +46,15 @@ CLEANUP-SUGGESTIONS.md
 *-INSTRUCTIONS.md
 AGENT-CONTEXT.md
 .local/
+
+# Private strategy / planning docs - never push, never deploy
+PRODUCT-ROADMAP.md
+*-ROADMAP.md
+*-STRATEGY.md
+*-NOTES.md
+
+# Agent tooling and local agent config (contains local absolute paths)
+.claude/
+.cursor/
+.cursorrules
+.aider*
