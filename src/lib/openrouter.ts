@@ -124,7 +124,11 @@ export async function openRouterScribeCompletion(
         { role: 'user', content: userPrompt }
       ],
       temperature: 0,
-      max_tokens: maxTokens
+      max_tokens: maxTokens,
+      // Enforce valid JSON at the provider rather than hoping the prompt holds.
+      // OPENROUTER_SCRIBE_MODEL must support structured outputs; if it doesn't,
+      // OpenRouter returns a 400 and the error names this request.
+      response_format: { type: 'json_object' }
     })
   });
 
