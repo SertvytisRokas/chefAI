@@ -7,7 +7,8 @@
  *   npx tsx scripts/seedRecipeTemplateEmbeddings.ts
  *
  * Requires: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY,
- *           OPENROUTER_API_KEY, OPENROUTER_EMBEDDING_MODEL, EMBEDDING_DIMENSIONS (optional, default 1536)
+ *           OPENROUTER_EMBEDDING_API_KEY, OPENROUTER_EMBEDDING_MODEL,
+ *           EMBEDDING_DIMENSIONS (optional, default 1536)
  */
 
 import { readFileSync, existsSync } from 'fs';
@@ -38,10 +39,12 @@ function loadEnvLocal() {
 }
 
 async function embedViaOpenRouter(text: string): Promise<number[]> {
-  const key = process.env.OPENROUTER_API_KEY;
+  const key = process.env.OPENROUTER_EMBEDDING_API_KEY;
   const model = process.env.OPENROUTER_EMBEDDING_MODEL;
   if (!key || !model) {
-    throw new Error('OPENROUTER_API_KEY and OPENROUTER_EMBEDDING_MODEL must be set');
+    throw new Error(
+      'OPENROUTER_EMBEDDING_API_KEY and OPENROUTER_EMBEDDING_MODEL must be set'
+    );
   }
   const dimensions = parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10);
   const body: Record<string, unknown> = {

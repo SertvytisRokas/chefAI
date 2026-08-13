@@ -42,7 +42,7 @@ Recipes are powered by RAG over stored recipe templates and your fridge contents
    cp .env.example .env.local
    ```
 
-   Fill in Supabase URL and keys, `OPENROUTER_API_KEY`, `OPENROUTER_CHAT_MODEL`, and `OPENROUTER_EMBEDDING_MODEL` (see `.env.example` for suggested defaults).
+   Fill in the Supabase URL and keys, then the four OpenRouter model ids and their four API keys (see `.env.example`).
 
 3. Apply the database schema in the Supabase SQL editor (see `postgres-schema.sql`). **This script drops and recreates every table — only run it on a fresh project, never against one with existing data.**
 
@@ -68,14 +68,20 @@ Recipes are powered by RAG over stored recipe templates and your fridge contents
 
 ## Environment variables
 
+See `.env.example` for the full list with inline notes.
+
+Each AI job has its own model and its own API key. All eight are required.
+
+| Job | Model | API key |
+|-----|-------|---------|
+| Single recipe generation | `OPENROUTER_RECIPE_MODEL` | `OPENROUTER_RECIPE_API_KEY` |
+| Weekly plan generation | `OPENROUTER_WEEKLY_MODEL` | `OPENROUTER_WEEKLY_API_KEY` |
+| Cook-to-fridge deduction | `OPENROUTER_SCRIBE_MODEL` | `OPENROUTER_SCRIBE_API_KEY` |
+| RAG embeddings | `OPENROUTER_EMBEDDING_MODEL` | `OPENROUTER_EMBEDDING_API_KEY` |
+
 | Variable | Description |
 |----------|-------------|
-| `OPENROUTER_API_KEY` | Your OpenRouter API key (chat + embeddings) |
-| `OPENROUTER_CHAT_MODEL` | Model id for recipe / weekly generation |
-| `OPENROUTER_EMBEDDING_MODEL` | Model id for RAG embeddings |
 | `EMBEDDING_DIMENSIONS` | Vector size (default `1536`, must match `recipe_templates.embedding` in Postgres) |
-| `OPENROUTER_SCRIBE_MODEL` | Small, cheap model id used to resolve cooked recipes against the fridge. Required for "I cooked this". |
-| `OPENROUTER_SCRIBE_API_KEY` | Optional separate key for the above, so its spend can be tracked or capped independently. Falls back to `OPENROUTER_API_KEY`. |
 
 ## Scripts
 

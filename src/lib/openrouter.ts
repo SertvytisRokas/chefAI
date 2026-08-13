@@ -3,18 +3,64 @@ import 'server-only';
 const OPENROUTER_CHAT_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_EMBEDDINGS_URL = 'https://openrouter.ai/api/v1/embeddings';
 
-function requireApiKey(): string {
-  const key = process.env.OPENROUTER_API_KEY;
+/**
+ * Every distinct job we send to OpenRouter.
+ *
+ * Each job has its own model and its own API key, so a model can be swapped for
+ * one job without touching the others, and spend is attributed per feature in
+ * the OpenRouter dashboard.
+ *
+ * An OpenRouter key is only a credential — no model is bound to it. The model is
+ * chosen per request, here in the code, from the env vars below.
+ */
+export type LlmPurpose = 'recipe' | 'weekly' | 'scribe' | 'embedding';
+
+/** Which model runs each job. One variable each, no fallbacks. */
+const MODEL_ENV: Record<LlmPurpose, string> = {
+  recipe: 'OPENROUTER_RECIPE_MODEL',
+  weekly: 'OPENROUTER_WEEKLY_MODEL',
+  scribe: 'OPENROUTER_SCRIBE_MODEL',
+  embedding: 'OPENROUTER_EMBEDDING_MODEL'
+};
+
+/** Which credential pays for each job. One variable each, no fallbacks. */
+const KEY_ENV: Record<LlmPurpose, string> = {
+  recipe: 'OPENROUTER_RECIPE_API_KEY',
+  weekly: 'OPENROUTER_WEEKLY_API_KEY',
+  scribe: 'OPENROUTER_SCRIBE_API_KEY',
+  embedding: 'OPENROUTER_EMBEDDING_API_KEY'
+};
+
+/** Reads an env var, treating blank or whitespace-only as unset. */
+function readEnv(name: string): string | undefined {
+  const value = process.env[name];
+  return value && value.trim() ? value.trim() : undefined;
+}
+
+/** Resolves which model id to use. The error names the exact variable to set. */
+function resolveModel(purpose: LlmPurpose): string {
+  const name = MODEL_ENV[purpose];
+  const model = readEnv(name);
+  if (!model) {
+    throw new Error(`${name} is not set (required for "${purpose}").`);
+  }
+  return model;
+}
+
+/** Resolves which key to authenticate with. The error names the exact variable to set. */
+function resolveApiKey(purpose: LlmPurpose): string {
+  const name = KEY_ENV[purpose];
+  const key = readEnv(name);
   if (!key) {
-    throw new Error('OPENROUTER_API_KEY is not set');
+    throw new Error(`${name} is not set (required for "${purpose}").`);
   }
   return key;
 }
 
-function openRouterHeaders(apiKey?: string): Record<string, string> {
+function openRouterHeaders(purpose: LlmPurpose): Record<string, string> {
   return {
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${apiKey || requireApiKey()}`,
+    Authorization: `Bearer ${resolveApiKey(purpose)}`,
     'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
     'X-Title': 'chefAI'
   };
@@ -22,19 +68,18 @@ function openRouterHeaders(apiKey?: string): Record<string, string> {
 
 /**
  * Sends a chat completion request to OpenRouter and returns the assistant text.
+ * Used for the two generation jobs (single recipe, weekly plan).
  */
 export async function openRouterChatCompletion(
+  purpose: Extract<LlmPurpose, 'recipe' | 'weekly'>,
   prompt: string,
   temperature = 0.2
 ): Promise<string> {
-  const model = process.env.OPENROUTER_CHAT_MODEL;
-  if (!model) {
-    throw new Error('OPENROUTER_CHAT_MODEL is not set');
-  }
+  const model = resolveModel(purpose);
 
   const resp = await fetch(OPENROUTER_CHAT_URL, {
     method: 'POST',
-    headers: openRouterHeaders(),
+    headers: openRouterHeaders(purpose),
     body: JSON.stringify({
       model,
       messages: [{ role: 'user', content: prompt }],
@@ -44,13 +89,13 @@ export async function openRouterChatCompletion(
 
   if (!resp.ok) {
     const errText = await resp.text();
-    throw new Error(`OpenRouter chat failed (${resp.status}): ${errText}`);
+    throw new Error(`OpenRouter ${purpose} request failed (${resp.status}): ${errText}`);
   }
 
   const data = await resp.json();
   const content = data.choices?.[0]?.message?.content;
   if (typeof content !== 'string' || !content.trim()) {
-    throw new Error('OpenRouter chat returned an empty response');
+    throw new Error(`OpenRouter ${purpose} request returned an empty response`);
   }
   return content;
 }
@@ -59,26 +104,19 @@ export async function openRouterChatCompletion(
  * Sends a bounded, low-cost completion to the Kitchen Scribe model.
  *
  * Kept separate from `openRouterChatCompletion` on purpose: the Scribe runs on
- * every cook, so it uses a cheap model, a hard output cap, temperature 0 for
- * repeatability, and an optional dedicated API key so its spend can be tracked
- * or capped independently of recipe generation.
+ * every cook, so it uses a cheap model, a hard output cap, and temperature 0
+ * for repeatability.
  */
 export async function openRouterScribeCompletion(
   systemPrompt: string,
   userPrompt: string,
   maxTokens = 700
 ): Promise<string> {
-  const model = process.env.OPENROUTER_SCRIBE_MODEL;
-  if (!model) {
-    throw new Error(
-      'OPENROUTER_SCRIBE_MODEL is not set. Point it at a cheap model to enable cook-to-fridge deduction.'
-    );
-  }
-  const apiKey = process.env.OPENROUTER_SCRIBE_API_KEY || undefined;
+  const model = resolveModel('scribe');
 
   const resp = await fetch(OPENROUTER_CHAT_URL, {
     method: 'POST',
-    headers: openRouterHeaders(apiKey),
+    headers: openRouterHeaders('scribe'),
     body: JSON.stringify({
       model,
       messages: [
@@ -108,10 +146,7 @@ export async function openRouterScribeCompletion(
  * `recipe_templates.embedding` in Postgres (default 1536).
  */
 export async function openRouterEmbed(text: string): Promise<number[]> {
-  const model = process.env.OPENROUTER_EMBEDDING_MODEL;
-  if (!model) {
-    throw new Error('OPENROUTER_EMBEDDING_MODEL is not set');
-  }
+  const model = resolveModel('embedding');
 
   const dimensions = parseInt(process.env.EMBEDDING_DIMENSIONS || '1536', 10);
 
@@ -126,7 +161,7 @@ export async function openRouterEmbed(text: string): Promise<number[]> {
 
   const resp = await fetch(OPENROUTER_EMBEDDINGS_URL, {
     method: 'POST',
-    headers: openRouterHeaders(),
+    headers: openRouterHeaders('embedding'),
     body: JSON.stringify(body)
   });
 

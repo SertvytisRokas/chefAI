@@ -96,7 +96,7 @@ export async function generateRecipe(
     personalization
   );
 
-  const raw = await openRouterChatCompletion(prompt, 0.2);
+  const raw = await openRouterChatCompletion('recipe', prompt, 0.2);
   return parseJsonFromModelResponse<RecipeResult>(raw, 'recipe');
 }
 
@@ -153,6 +153,6 @@ export async function generateWeeklyPlan(
     `Output JSON with a single key \"week\" which is an array of objects. Each object has a \"day\" string and a \"meals\" array. Each meal has \"mealType\" (breakfast, lunch, dinner), \"title\", \"ingredients\" (array of {name, quantity}), \"steps\" (array of strings), and \"dietType\" (string). For dietType of each meal you must choose exactly one of: vegan, vegetarian, pescatarian, omnivore — based on the ingredients and preparation of that meal (vegan: no animal products; vegetarian: may include dairy/eggs but no meat or fish; pescatarian: may include fish/seafood but no meat; omnivore: may include meat). Do not include any commentary outside the JSON.\n\n` +
     `Here are some similar recipes for inspiration:\n${templatesText}\n\nJSON:`;
 
-  const raw = await openRouterChatCompletion(prompt, 0.2);
+  const raw = await openRouterChatCompletion('weekly', prompt, 0.2);
   return parseJsonFromModelResponse<WeeklyPlan>(raw, 'weekly plan');
 }
