@@ -46,9 +46,11 @@ Recipes are powered by RAG over stored recipe templates and your fridge contents
 
 3. Apply the database schema in the Supabase SQL editor (see `postgres-schema.sql`). **This script drops and recreates every table — only run it on a fresh project, never against one with existing data.**
 
-   For an existing project, instead apply the additive migrations individually:
+   For an existing project, instead apply the additive migrations individually, in this order:
    - `scripts/blog-articles.sql` – blog tables + seed content
    - `scripts/enable-rls.sql` – Row Level Security policies (required so users can't read/write each other's data; safe to re-run anytime)
+   - `scripts/m15-schema-alignment.sql` – unit conversion metadata, fridge favourites and depletion tracking, the `ingredient_standards` table
+   - `scripts/m15-seed-ingredient-standards.sql` – starter canonical units for ~75 common ingredients
 
 4. **Seed recipe template embeddings** (one-time, enables vector RAG):
 
@@ -102,7 +104,12 @@ Each AI job has its own model and its own API key. All eight are required.
 - `src/app/api/generate-weekly/` – Weekly plan generation API
 - `src/app/api/cook/plan/` – Proposes fridge deductions for a cooked recipe (read-only)
 - `src/app/api/cook/apply/` – Applies a confirmed deduction plan (no model call)
-- `src/lib/scribe.ts` – Resolves recipe ingredients against fridge items and reconciles units
+- `src/app/api/fridge/normalize/` – Records the canonical unit for ingredients not yet in `ingredient_standards`
+- `src/lib/cookPlanner.ts` – Orchestrates the deduction plan; matches names, then converts units
+- `src/lib/units.ts` – Unit conversion. Units convert only within a dimension (mass / volume / count)
+- `src/lib/ingredientStandards.ts` – Canonical unit and sub-unit lookup (e.g. cloves per bulb)
+- `src/lib/recipeIngredients.ts` – Reads recipe ingredients; supports both the structured and legacy shapes
+- `src/lib/scribe.ts` – Matches recipe ingredient names to fridge items when the dictionary cannot
 - `src/lib/executor.ts` – Deterministic fridge arithmetic; the only place cooking mutates quantities
 - `src/app/api/auth/check-email/` – Signup email status check (duplicate/pending detection)
 - `postgres-schema.sql` – Supabase/Postgres schema and RAG function (fresh installs only)

@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useSupabase, useUser } from '../../components/SupabaseProvider';
 import Modal from '../../components/Modal';
+import { formatStoredIngredient } from '../../lib/recipeIngredients';
+import type { RecipeIngredientPayload } from '../../lib/llmTypes';
 
 interface RecipeRecord {
   id: number;
@@ -15,7 +17,7 @@ interface RecipeRecord {
   diet_type_id: number | null;
   meal_types?: { name: string } | null;
   diet_types?: { name: string } | null;
-  ingredients?: { name: string; quantity: string }[];
+  ingredients?: RecipeIngredientPayload[];
   steps?: string[];
 }
 
@@ -322,7 +324,7 @@ export default function HistoryPage() {
                 <ul className="app-ingredient-list">
                   {selectedRecipe.ingredients?.map((ing, idx) => (
                     <li key={idx}>
-                      {ing.quantity} {ing.name}
+                      {formatStoredIngredient(ing)}
                     </li>
                   ))}
                 </ul>

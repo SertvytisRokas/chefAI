@@ -3,6 +3,10 @@
 import { useState, useEffect } from 'react';
 import { useSupabase, useUser } from '../../components/SupabaseProvider';
 import CookedThis from '../../components/CookedThis';
+import {
+  formatStoredIngredient,
+  storedIngredientQuantity
+} from '../../lib/recipeIngredients';
 import type { RecipeResult } from '../../lib/llmTypes';
 import { preferencesFromPersonalization } from '../../lib/personalization';
 import type { PersonalizationAnswers } from '../../lib/personalization';
@@ -150,16 +154,7 @@ export default function GeniusPage() {
             }
           }
           if (!found) {
-            const parts = ing.quantity.trim().split(/\s+/);
-            let qty = 1;
-            let unit = '';
-            if (parts.length >= 2) {
-              const maybeNum = parseFloat(parts[0]);
-              if (!Number.isNaN(maybeNum)) {
-                qty = maybeNum;
-                unit = parts[1].toLowerCase();
-              }
-            }
+            const { quantity: qty, unit } = storedIngredientQuantity(ing);
             missingRecalc.push({ name: ing.name, quantity: qty, unit });
           }
         });
@@ -342,17 +337,7 @@ export default function GeniusPage() {
             }
           }
           if (!found) {
-            // Parse quantity and unit from quantity string
-            const parts = ing.quantity.trim().split(/\s+/);
-            let qty = 1;
-            let unit = '';
-            if (parts.length >= 2) {
-              const maybeNum = parseFloat(parts[0]);
-              if (!Number.isNaN(maybeNum)) {
-                qty = maybeNum;
-                unit = parts[1].toLowerCase();
-              }
-            }
+            const { quantity: qty, unit } = storedIngredientQuantity(ing);
             missingItems.push({ name: ing.name, quantity: qty, unit });
           }
         });
@@ -589,7 +574,7 @@ export default function GeniusPage() {
                           : undefined
                       }
                     >
-                      {ing.quantity} {ing.name}
+                      {formatStoredIngredient(ing)}
                     </span>
                   </li>
                 ))}

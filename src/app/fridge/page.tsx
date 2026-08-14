@@ -19,13 +19,16 @@ export default async function FridgePage() {
   // Fetch fridge items for the current user. Include measurement type name via foreign key.
   const { data: items } = await supabase
     .from('fridge_items')
-    .select('id,name,quantity,measurement_type_id,measurement_types(name),expiration_date')
+    .select(
+      'id,name,quantity,measurement_type_id,measurement_types(name),expiration_date,favorite,depleted_at'
+    )
     .eq('user_id', user.id)
     .order('id', { ascending: true });
-  // Fetch measurement types for the select input
+  // Fetch measurement types for the select input. Inactive units are hidden:
+  // they are retired duplicates kept only so old rows still resolve.
   const { data: measurementTypes } = await supabase
     .from('measurement_types')
-    .select('id,name')
+    .select('id,name,abbreviation,dimension')
     .order('id', { ascending: true });
   return (
     <FridgeClient

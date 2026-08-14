@@ -3,31 +3,41 @@ import 'server-only';
 import { openRouterScribeCompletion, parseJsonFromModelResponse } from './openrouter';
 
 /**
- * The Kitchen Scribe.
+ * The Kitchen Scribe, v2 — name matching, and nothing else.
  *
- * Bounded resolver: given a cooked recipe and the user's fridge, it decides
- * *what* was consumed and how much, reconciling units along the way ("2 cloves"
- * against "1 bulb"). It returns a deduction plan and nothing else — it never
- * computes the remaining quantity, never returns fridge state, and never
- * touches the database. The Executor does all of that deterministically.
+ * v1 asked one model call to do three jobs at once: read the amount, find the
+ * matching fridge item, and convert the unit. It silently failed the easiest of
+ * them — a recipe's 200 g of potatoes came back as "200" against a fridge item
+ * held in kilograms, and one confirmation wiped 3 kg of stock. Unit mistakes are
+ * order-of-magnitude mistakes on a destructive operation.
  *
- * Two deliberate safety properties:
- *  - The model references fridge items by a 1-based index into the list we sent
- *    it, not by database id. An index we did not issue is simply dropped, so a
- *    hallucinated reference cannot reach a real row.
- *  - Every field is re-validated and clamped here before it leaves this module.
+ * So the job was cut down. This module now answers exactly one question, the
+ * only one that genuinely needs judgement:
+ *
+ *     which fridge item is this recipe line talking about?
+ *
+ * It never sees an amount or a unit, and therefore cannot get one wrong.
+ * Reading amounts is a copy job (`recipeIngredients.ts`), converting units is
+ * arithmetic (`units.ts`, `ingredientStandards.ts`), and subtracting is the
+ * Executor's job. Callers should reach this only for lines that could not
+ * already be matched from the standards dictionary — see `cookPlanner.ts`.
+ *
+ * Safety property preserved from v1: the model refers to items by a 1-based
+ * index into the lists we sent it, never a database id. An index we did not
+ * issue is dropped, so a hallucinated reference cannot reach a real row.
  */
 
-export interface ScribeFridgeItem {
-  id: string;
+export interface ScribeCandidateItem {
+  /** Caller's own identifier, echoed back untouched. Never shown to the model. */
+  ref: string;
   name: string;
-  quantity: number;
-  unit: string;
+  /** Shown purely as a disambiguation hint, e.g. garlic held as "pieces". */
+  unitLabel?: string;
 }
 
-export interface ScribeRecipeIngredient {
+export interface ScribeRecipeLine {
+  ref: string;
   name: string;
-  quantity: string;
 }
 
 export interface ScribeDietContext {
@@ -35,267 +45,164 @@ export interface ScribeDietContext {
   allergens?: string[] | null;
 }
 
-export interface ScribeResolution {
-  deductions: { fridgeItemId: string; deduct: number; why?: string }[];
-  unmatched: string[];
-  question: string | null;
+export interface ScribeLink {
+  /** `ref` of the recipe line. */
+  recipeRef: string;
+  /** `ref` of the fridge item it refers to. */
+  fridgeRef: string;
+}
+
+export interface ScribeLinkResult {
+  links: ScribeLink[];
   /** True when we answered without spending a model call. */
   skippedModel: boolean;
 }
 
-/** Below this many fridge rows we send the whole fridge; above it we pre-filter. */
-const INLINE_FRIDGE_LIMIT = 40;
-/** Hard ceiling on rows sent to the model, whatever the filter produces. */
-const MAX_CANDIDATE_ROWS = 60;
-/** Recipes longer than this are truncated — no real recipe approaches it. */
-const MAX_INGREDIENTS = 40;
+/** Ceiling on how much we will ever show the model in one call. */
+const MAX_LINES = 60;
 const MAX_NAME_CHARS = 48;
-const MAX_WHY_CHARS = 80;
-const MAX_QUESTION_CHARS = 200;
 
-const SYSTEM_PROMPT = `You are the Kitchen Scribe for a food-waste app. Given a recipe the user just cooked and their fridge, you report how much of each fridge item was consumed.
+const SYSTEM_PROMPT = `You match ingredients from a recipe someone just cooked to the items in their fridge.
+
+For each RECIPE line, find the FRIDGE item that is the same food. That is your only task.
 
 Rules:
-- Reference fridge items ONLY by the numeric id shown in the FRIDGE list. Never invent an id.
-- "amt" is the amount consumed, expressed in that item's OWN unit (the unit shown next to it).
-- Convert between how recipes talk and how fridges are stored. Examples: 2 cloves of garlic out of a whole bulb is about 0.15 bulb; 1 cup of rice is about 180 grams; 1 medium onion is 1 piece.
-- Approximate confidently. A close number is far more useful than no answer. Never return 0 for something clearly used.
-- Only match a fridge item if it is plausibly the SAME food. Similar names are not enough: "cream" is not "ice cream", "corn" is not "cornflour".
-- If a recipe ingredient has no plausible fridge match, put its name in "unmatched".
-- Put trace seasonings and things nobody tracks (salt, pepper, water, oil for greasing) in "unmatched" instead of guessing an amount.
-- Never report more than the fridge holds unless the recipe genuinely used more; the app handles running out.
-- Use "question" only if you genuinely cannot proceed without asking. Otherwise null.
-- You do NOT calculate what is left. The app subtracts. Report only what was consumed.
+- Match only when it is genuinely the SAME food. Similar spelling is not enough: "cream" is not "ice cream", "corn" is not "cornflour", "coconut milk" is not "milk".
+- A specific name and a general one do match when they are the same food: "cheddar" and "cheddar cheese", "spring onion" and "scallions", "mince" and "ground beef".
+- If a recipe line has no matching fridge item, simply leave it out. Do not force a match.
+- Each recipe line matches at most one fridge item.
+- Amounts and units are deliberately not shown to you. They are handled elsewhere. Match names only.
 
-Reply with ONLY a JSON object. No commentary, no markdown fences, no explanation.
+Reply with ONLY a JSON object, no commentary and no markdown fences.
 
-The object has exactly three fields:
-- "deduct": a list. Each entry has "i" (a fridge id number from the list), "amt" (a number), and "why" (at most 8 words).
-- "unmatched": a list of recipe ingredient names, as plain strings.
-- "question": a string, or null.
+Worked example. Given:
+RECIPE
+1. potatoes
+2. garlic
+3. salt
+FRIDGE
+1. olive oil (ml)
+2. potatoes (kilograms)
+3. garlic (pieces)
 
-Worked example. If the recipe used "2 cloves garlic", "300 g rice" and "a pinch of salt",
-and the FRIDGE list contained:
-1|garlic|1|bulb
-2|rice|500|grams
-then the correct reply is exactly:
-{"deduct":[{"i":1,"amt":0.15,"why":"2 cloves of one bulb"},{"i":2,"amt":300,"why":"used as listed"}],"unmatched":["salt"],"question":null}
+the correct reply is exactly:
+{"links":[{"r":1,"f":2},{"r":2,"f":3}]}
 
-Reply in that exact shape, using real numbers for the recipe you are given.
-Never output angle brackets, placeholders, or field descriptions — only real values.`;
+Salt is absent from that reply because the fridge has none. Use real numbers from the lists you are given; never output placeholders or angle brackets.`;
 
 function truncate(value: string, max: number): string {
   const trimmed = value.trim();
   return trimmed.length > max ? `${trimmed.slice(0, max - 1)}…` : trimmed;
 }
 
-/** Lowercase word tokens with naive singularisation, used only for candidate recall. */
-function tokenize(value: string): string[] {
-  const words = value
-    .toLowerCase()
-    .replace(/[^a-z\s]/g, ' ')
-    .split(/\s+/)
-    .filter((word) => word.length >= 3);
-  const singular = words.map((word) => {
-    if (word.endsWith('ies') && word.length > 4) return `${word.slice(0, -3)}y`;
-    if (word.endsWith('es') && word.length > 4) return word.slice(0, -2);
-    if (word.endsWith('s') && word.length > 3) return word.slice(0, -1);
-    return word;
-  });
-  return Array.from(new Set(singular));
-}
-
-function tokensOverlap(a: string[], b: string[]): boolean {
-  for (const left of a) {
-    for (const right of b) {
-      if (left === right) return true;
-      // Substring matches only for longer tokens, to avoid "oat" hitting "oats"
-      // style false positives being drowned out by junk like "ice" in "rice".
-      if (left.length >= 5 && right.length >= 5) {
-        if (left.includes(right) || right.includes(left)) return true;
-      }
-    }
-  }
-  return false;
-}
-
-/**
- * Narrows a large fridge to plausibly relevant rows before spending tokens.
- *
- * Deliberately high-recall: this only decides what the model gets to *see*, never
- * what gets deducted. Small fridges skip it entirely so nothing can be missed.
- */
-function selectCandidates(
-  fridge: ScribeFridgeItem[],
-  ingredients: ScribeRecipeIngredient[]
-): ScribeFridgeItem[] {
-  if (fridge.length <= INLINE_FRIDGE_LIMIT) return fridge;
-
-  const ingredientTokens = ingredients.map((ing) => tokenize(ing.name));
-  const picked = fridge.filter((item) => {
-    const itemTokens = tokenize(item.name);
-    return ingredientTokens.some((tokens) => tokensOverlap(tokens, itemTokens));
-  });
-
-  return picked.slice(0, MAX_CANDIDATE_ROWS);
-}
-
-function buildUserPrompt(
-  recipeTitle: string,
-  ingredients: ScribeRecipeIngredient[],
-  candidates: ScribeFridgeItem[],
-  diet: ScribeDietContext
-): string {
-  const usedLines = ingredients
-    .map((ing) => `- ${truncate(ing.quantity || '', 24)} ${truncate(ing.name, MAX_NAME_CHARS)}`.trim())
-    .join('\n');
-
-  // Index is 1-based and local to this request; it is not a database id.
-  const fridgeLines = candidates
-    .map(
-      (item, index) =>
-        `${index + 1}|${truncate(item.name, MAX_NAME_CHARS)}|${item.quantity}|${truncate(item.unit || 'units', 16)}`
-    )
-    .join('\n');
-
-  // Diet context is included only to disambiguate matches (a vegan's "milk" is
-  // the oat milk in their fridge). Deliberately not the full personalization
-  // profile — this call runs on every cook and stays small.
-  const dietBits: string[] = [];
-  if (diet.diet) dietBits.push(`diet ${diet.diet}`);
-  if (diet.allergens && diet.allergens.length > 0) {
-    dietBits.push(`never matches to: ${diet.allergens.slice(0, 12).join(', ')}`);
-  }
-  const dietLine = dietBits.length > 0 ? `\nUSER: ${dietBits.join('; ')}.\n` : '\n';
-
-  return `RECIPE: ${truncate(recipeTitle, 80)}
-
-USED:
-${usedLines}
-
-FRIDGE (id|item|have|unit):
-${fridgeLines}
-${dietLine}
-JSON:`;
-}
-
-interface RawScribeOutput {
-  deduct?: unknown;
-  unmatched?: unknown;
-  question?: unknown;
-}
-
-function coerceNumber(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isFinite(value)) return value;
+function coerceIndex(value: unknown): number | null {
+  if (typeof value === 'number' && Number.isInteger(value)) return value;
   if (typeof value === 'string') {
-    const parsed = Number.parseFloat(value.trim());
-    if (Number.isFinite(parsed)) return parsed;
+    const parsed = Number.parseInt(value.trim(), 10);
+    if (Number.isInteger(parsed)) return parsed;
   }
   return null;
 }
 
-/**
- * Resolves a cooked recipe against the fridge into a deduction plan.
- *
- * Never throws for "nothing to do" cases — an empty fridge or an ingredient-less
- * recipe returns an empty plan without spending a model call.
- */
-export async function resolveCookDeductions(
-  recipeTitle: string,
-  ingredients: ScribeRecipeIngredient[],
-  fridge: ScribeFridgeItem[],
-  diet: ScribeDietContext = {}
-): Promise<ScribeResolution> {
-  const usableIngredients = ingredients
-    .filter((ing) => ing && typeof ing.name === 'string' && ing.name.trim().length > 0)
-    .slice(0, MAX_INGREDIENTS)
-    .map((ing) => ({
-      name: ing.name,
-      quantity: typeof ing.quantity === 'string' ? ing.quantity : ''
-    }));
+function buildUserPrompt(
+  recipeLines: ScribeRecipeLine[],
+  fridgeItems: ScribeCandidateItem[],
+  diet: ScribeDietContext
+): string {
+  const recipeText = recipeLines
+    .map((line, index) => `${index + 1}. ${truncate(line.name, MAX_NAME_CHARS)}`)
+    .join('\n');
 
-  // Nothing to resolve — don't pay for a model call to learn that.
-  if (usableIngredients.length === 0 || fridge.length === 0) {
-    return {
-      deductions: [],
-      unmatched: usableIngredients.map((ing) => ing.name),
-      question: null,
-      skippedModel: true
-    };
+  const fridgeText = fridgeItems
+    .map((item, index) => {
+      const unit = item.unitLabel ? ` (${truncate(item.unitLabel, 16)})` : '';
+      return `${index + 1}. ${truncate(item.name, MAX_NAME_CHARS)}${unit}`;
+    })
+    .join('\n');
+
+  // Diet context earns its tokens only as a disambiguation hint: a vegan's
+  // "milk" is the oat milk in their fridge. Allergens are listed as things to
+  // never match onto, since matching an allergen would propose consuming it.
+  const dietBits: string[] = [];
+  if (diet.diet) dietBits.push(`eats ${diet.diet}`);
+  if (diet.allergens && diet.allergens.length > 0) {
+    dietBits.push(`never match to: ${diet.allergens.slice(0, 12).join(', ')}`);
   }
+  const dietLine = dietBits.length > 0 ? `\nUSER: ${dietBits.join('; ')}.\n` : '\n';
 
-  const candidates = selectCandidates(fridge, usableIngredients);
-  if (candidates.length === 0) {
-    return {
-      deductions: [],
-      unmatched: usableIngredients.map((ing) => ing.name),
-      question: null,
-      skippedModel: true
-    };
+  return `RECIPE
+${recipeText}
+
+FRIDGE
+${fridgeText}
+${dietLine}
+JSON:`;
+}
+
+interface RawLinkOutput {
+  links?: unknown;
+}
+
+/**
+ * Asks the model which fridge item each recipe line refers to.
+ *
+ * Returns only links it is confident enough to state; anything absent from the
+ * result is simply left unmatched by the caller. Never throws for the empty
+ * case — no lines or no candidates returns an empty result without spending a
+ * model call.
+ */
+export async function linkIngredientsToFridge(
+  recipeLines: ScribeRecipeLine[],
+  fridgeItems: ScribeCandidateItem[],
+  diet: ScribeDietContext = {}
+): Promise<ScribeLinkResult> {
+  const lines = recipeLines.filter((line) => line && line.name.trim()).slice(0, MAX_LINES);
+  const candidates = fridgeItems.filter((item) => item && item.name.trim()).slice(0, MAX_LINES);
+
+  if (lines.length === 0 || candidates.length === 0) {
+    return { links: [], skippedModel: true };
   }
 
   const raw = await openRouterScribeCompletion(
     SYSTEM_PROMPT,
-    buildUserPrompt(recipeTitle, usableIngredients, candidates, diet)
+    buildUserPrompt(lines, candidates, diet)
   );
 
-  let parsed: RawScribeOutput;
+  let parsed: RawLinkOutput;
   try {
-    parsed = parseJsonFromModelResponse<RawScribeOutput>(raw, 'deduction plan');
+    parsed = parseJsonFromModelResponse<RawLinkOutput>(raw, 'ingredient links');
   } catch {
-    // Weak models sometimes echo the example structure instead of filling it in,
-    // or wrap the object in prose. Neither is recoverable here, and the raw
-    // parser error ("Unexpected token '<'") tells the user nothing useful.
+    // Weak models sometimes echo the example or wrap the object in prose.
+    // Neither is recoverable, and the raw parser error tells the user nothing.
     throw new Error(
       'The Scribe model did not return usable JSON. Try again, or set OPENROUTER_SCRIBE_MODEL ' +
         'to a model that reliably follows structured output.'
     );
   }
 
-  // Everything below re-validates the model's output. An index we did not issue,
-  // a non-numeric amount, or a non-positive amount is dropped silently.
-  const byItemId = new Map<string, { fridgeItemId: string; deduct: number; why?: string }>();
-  const rawDeductions = Array.isArray(parsed.deduct) ? parsed.deduct : [];
+  // Everything below re-validates the model's output. An index we did not
+  // issue, or a duplicate claim on a recipe line, is dropped silently.
+  const rawLinks = Array.isArray(parsed.links) ? parsed.links : [];
+  const seenRecipeIndexes = new Set<number>();
+  const links: ScribeLink[] = [];
 
-  for (const entry of rawDeductions.slice(0, MAX_CANDIDATE_ROWS)) {
+  for (const entry of rawLinks.slice(0, MAX_LINES)) {
     if (!entry || typeof entry !== 'object') continue;
     const record = entry as Record<string, unknown>;
-    const index = coerceNumber(record.i);
-    const amount = coerceNumber(record.amt);
-    if (index === null || amount === null) continue;
-    if (!Number.isInteger(index) || index < 1 || index > candidates.length) continue;
-    if (amount <= 0) continue;
 
-    const item = candidates[index - 1];
-    const why = typeof record.why === 'string' ? truncate(record.why, MAX_WHY_CHARS) : undefined;
+    const recipeIndex = coerceIndex(record.r);
+    const fridgeIndex = coerceIndex(record.f);
+    if (recipeIndex === null || fridgeIndex === null) continue;
+    if (recipeIndex < 1 || recipeIndex > lines.length) continue;
+    if (fridgeIndex < 1 || fridgeIndex > candidates.length) continue;
+    if (seenRecipeIndexes.has(recipeIndex)) continue;
 
-    // Two lines pointing at the same item are summed rather than fighting.
-    const existing = byItemId.get(item.id);
-    if (existing) {
-      existing.deduct = Math.round((existing.deduct + amount) * 1000) / 1000;
-    } else {
-      byItemId.set(item.id, {
-        fridgeItemId: item.id,
-        deduct: Math.round(amount * 1000) / 1000,
-        why
-      });
-    }
+    seenRecipeIndexes.add(recipeIndex);
+    links.push({
+      recipeRef: lines[recipeIndex - 1].ref,
+      fridgeRef: candidates[fridgeIndex - 1].ref
+    });
   }
 
-  const unmatched = (Array.isArray(parsed.unmatched) ? parsed.unmatched : [])
-    .filter((name): name is string => typeof name === 'string' && name.trim().length > 0)
-    .map((name) => truncate(name, MAX_NAME_CHARS))
-    .slice(0, MAX_INGREDIENTS);
-
-  const question =
-    typeof parsed.question === 'string' && parsed.question.trim().length > 0
-      ? truncate(parsed.question, MAX_QUESTION_CHARS)
-      : null;
-
-  return {
-    deductions: Array.from(byItemId.values()),
-    unmatched,
-    question,
-    skippedModel: false
-  };
+  return { links, skippedModel: false };
 }

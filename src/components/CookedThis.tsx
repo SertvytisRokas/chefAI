@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Modal from './Modal';
-import type { AppliedDeduction, CookPlan } from '../lib/cookTypes';
+import type { AppliedDeduction, CookPlan, MatchSource } from '../lib/cookTypes';
 
 interface CookedThisProps {
   /** Saved `recipes.id`. The button is hidden until the recipe has been saved. */
@@ -11,24 +11,32 @@ interface CookedThisProps {
   onApplied?: () => void;
 }
 
-/** Trims float noise for display: 0.15 stays, 0.150 doesn't, 2.0 becomes 2. */
+/** Trims float noise for display: 0.15 stays, 0.1500 doesn't, 2.0 becomes 2. */
 function formatQuantity(value: number): string {
   if (!Number.isFinite(value)) return '0';
-  return String(Math.round(value * 1000) / 1000);
+  return String(Math.round(value * 10000) / 10000);
 }
 
 function remainingAfter(before: number, deduct: number): number {
-  if (!Number.isFinite(deduct) || deduct <= 0) return Math.round(before * 1000) / 1000;
-  return Math.round(Math.max(0, before - deduct) * 1000) / 1000;
+  if (!Number.isFinite(deduct) || deduct <= 0) return Math.round(before * 10000) / 10000;
+  return Math.round(Math.max(0, before - deduct) * 10000) / 10000;
+}
+
+/** How the match was made, in words the user can judge. */
+function sourceLabel(source: MatchSource): string {
+  if (source === 'exact') return 'name match';
+  if (source === 'standard') return 'known ingredient';
+  return 'matched by AI';
 }
 
 /**
  * "I cooked this" — closes the maintenance loop.
  *
- * Asks the server for a proposed deduction plan, shows it for confirmation, and
- * applies it only when the user agrees. Amounts are editable, because the Scribe
- * guessing "0.15 of a bulb" is a starting point the user should be able to
- * correct ("I only used half the onion") rather than a verdict.
+ * Shows the proposed plan for confirmation before anything is written, with the
+ * reasoning behind each number and a loud warning on anything that would take
+ * more than the fridge holds. Amounts are editable, because a proposal is a
+ * starting point the user should be able to correct — "I only used half the
+ * onion" — rather than a verdict.
  */
 export default function CookedThis({ recipeId, onApplied }: CookedThisProps) {
   const [open, setOpen] = useState(false);
@@ -120,9 +128,7 @@ export default function CookedThis({ recipeId, onApplied }: CookedThisProps) {
         {applied && (
           <div>
             <p className="page-lead">
-              {applied.length > 0
-                ? 'Your fridge has been updated.'
-                : 'Nothing was changed.'}
+              {applied.length > 0 ? 'Your fridge has been updated.' : 'Nothing was changed.'}
             </p>
             {applied.length > 0 && (
               <ul className="app-ingredient-list app-ingredient-list--spaced mb-2">
@@ -130,7 +136,9 @@ export default function CookedThis({ recipeId, onApplied }: CookedThisProps) {
                   <li key={line.fridgeItemId}>
                     {line.name}: {formatQuantity(line.before)} → {formatQuantity(line.after)}{' '}
                     {line.unit}
-                    {line.depleted && <span className="text-danger"> (used up)</span>}
+                    {line.depleted && (
+                      <span className="text-danger"> (used up — kept for 7 days)</span>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -154,16 +162,20 @@ export default function CookedThis({ recipeId, onApplied }: CookedThisProps) {
                   Here is what we think you used. Adjust anything that looks wrong — set an
                   amount to 0 to leave that item alone.
                 </p>
-                <ul className="app-ingredient-list app-ingredient-list--spaced mb-2">
+                <div className="mb-2">
                   {plan.deductions.map((line) => {
                     const rawAmount = amounts[line.fridgeItemId] ?? '';
                     const parsed = Number.parseFloat(rawAmount);
                     const after = remainingAfter(line.before, parsed);
+                    // Recompute against the edited value rather than trusting
+                    // the server's warning, so correcting the number clears it.
+                    const overdrawn = Number.isFinite(parsed) && parsed > line.before;
                     return (
-                      <li key={line.fridgeItemId}>
+                      <div className="cook-line" key={line.fridgeItemId}>
                         <div className="app-field">
                           <label className="app-label">
                             {line.name} — have {formatQuantity(line.before)} {line.unit}
+                            <span className="cook-source-tag">{sourceLabel(line.source)}</span>
                           </label>
                           <input
                             type="text"
@@ -179,35 +191,38 @@ export default function CookedThis({ recipeId, onApplied }: CookedThisProps) {
                             }}
                           />
                         </div>
-                        <div>
+                        <div className="cook-line-why">{line.why}</div>
+                        <div className="cook-line-result">
                           Uses {rawAmount === '' ? '0' : rawAmount} {line.unit} → leaves{' '}
                           {formatQuantity(after)} {line.unit}
                           {after === 0 && <span className="text-danger"> (used up)</span>}
                         </div>
-                        {line.why && <div className="app-label">{line.why}</div>}
-                      </li>
+                        {overdrawn && (
+                          <div className="cook-warning">
+                            This is more than you have ({rawAmount} {line.unit} of{' '}
+                            {formatQuantity(line.before)} {line.unit}). Check the amount before
+                            applying — it will empty the item completely.
+                          </div>
+                        )}
+                      </div>
                     );
                   })}
-                </ul>
+                </div>
               </>
             )}
 
-            {plan.question && (
-              <div className="app-subsection">
-                <h4 className="app-subsection-title">One thing we weren&apos;t sure about</h4>
-                <p>{plan.question}</p>
-              </div>
-            )}
-
-            {plan.unmatched.length > 0 && (
+            {plan.unresolved.length > 0 && (
               <div className="app-subsection">
                 <h4 className="app-subsection-title">Not deducted</h4>
                 <p className="page-lead">
-                  These weren&apos;t matched to anything in your fridge, so they were left alone.
+                  These were left alone, with the reason for each.
                 </p>
                 <ul className="app-ingredient-list mb-2">
-                  {plan.unmatched.map((name, idx) => (
-                    <li key={idx}>{name}</li>
+                  {plan.unresolved.map((line, idx) => (
+                    <li key={idx}>
+                      {line.recipeLine || line.name}
+                      <div className="cook-line-why">{line.reason}</div>
+                    </li>
                   ))}
                 </ul>
               </div>
@@ -215,12 +230,7 @@ export default function CookedThis({ recipeId, onApplied }: CookedThisProps) {
 
             <div className="mt-2">
               {!nothingToDeduct && (
-                <button
-                  type="button"
-                  className="btn"
-                  onClick={handleApply}
-                  disabled={applying}
-                >
+                <button type="button" className="btn" onClick={handleApply} disabled={applying}>
                   {applying ? 'Updating…' : 'Update my fridge'}
                 </button>
               )}{' '}

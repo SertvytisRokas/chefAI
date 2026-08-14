@@ -5,6 +5,10 @@ import { useSupabase, useUser } from '../../components/SupabaseProvider';
 import type { RecipeResult, WeeklyPlan } from '../../lib/llmTypes';
 import { preferencesFromPersonalization } from '../../lib/personalization';
 import type { PersonalizationAnswers } from '../../lib/personalization';
+import {
+  formatStoredIngredient,
+  storedIngredientQuantity
+} from '../../lib/recipeIngredients';
 import Modal from '../../components/Modal';
 
 /**
@@ -295,16 +299,7 @@ export default function WeeklyPlanPage() {
                 }
               }
               if (!found) {
-                const parts = ing.quantity.trim().split(/\s+/);
-                let qty = 1;
-                let unit = '';
-                if (parts.length >= 2) {
-                  const maybeNum = parseFloat(parts[0]);
-                  if (!Number.isNaN(maybeNum)) {
-                    qty = maybeNum;
-                    unit = parts[1].toLowerCase();
-                  }
-                }
+                const { quantity: qty, unit } = storedIngredientQuantity(ing);
                 missingItems.push({ name: ing.name, quantity: qty, unit });
               }
             });
@@ -583,16 +578,7 @@ export default function WeeklyPlanPage() {
           }
         }
         if (!found) {
-          const parts = ing.quantity.trim().split(/\s+/);
-          let qty = 1;
-          let unit = '';
-          if (parts.length >= 2) {
-            const maybeNum = parseFloat(parts[0]);
-            if (!Number.isNaN(maybeNum)) {
-              qty = maybeNum;
-              unit = parts[1].toLowerCase();
-            }
-          }
+          const { quantity: qty, unit } = storedIngredientQuantity(ing);
           missingList.push({ name: ing.name, quantity: qty, unit });
         }
       });
@@ -770,7 +756,7 @@ export default function WeeklyPlanPage() {
                           const isMissing = highlightMissing && meal.missing && (meal.missing as any[]).some((m) => m.name.toLowerCase() === ing.name.toLowerCase());
                           return (
                             <li key={idx} className={isMissing ? 'text-danger' : undefined}>
-                              {ing.quantity} {ing.name}
+                              {formatStoredIngredient(ing)}
                             </li>
                           );
                         })}

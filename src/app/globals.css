@@ -840,6 +840,103 @@ main.page {
   font-size: 0.95rem;
 }
 
+/* --- Fridge: favourites, stocked, and emptied groups --------------------- */
+
+.fridge-group-header td {
+  background-color: rgba(255, 255, 255, 0.03);
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.fridge-group-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  letter-spacing: 0.01em;
+}
+
+.fridge-group-hint {
+  color: var(--muted-text-color);
+  font-size: 0.85rem;
+}
+
+/* Emptied items stay visible as an "you are out of this" signal, but must not
+   compete with what you actually have. */
+.fridge-row--empty td {
+  opacity: 0.6;
+}
+
+.fridge-removal-notice {
+  font-size: 0.8rem;
+  color: var(--muted-text-color);
+  margin-top: 0.15rem;
+}
+
+.fridge-star {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 0.4rem 0 0;
+  font-size: 1.05rem;
+  line-height: 1;
+  color: var(--muted-text-color);
+  transition: color 0.15s ease, transform 0.15s ease;
+}
+
+.fridge-star:hover {
+  color: #f5c518;
+  transform: scale(1.15);
+}
+
+.fridge-star.is-active {
+  color: #f5c518;
+}
+
+/* --- Cook confirmation screen ------------------------------------------- */
+
+.cook-line {
+  padding: 0.6rem 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.cook-line:last-child {
+  border-bottom: none;
+}
+
+.cook-line-why {
+  font-size: 0.82rem;
+  color: var(--muted-text-color);
+  margin-top: 0.2rem;
+}
+
+.cook-line-result {
+  font-size: 0.9rem;
+  margin-top: 0.2rem;
+}
+
+/* A proposal that would take more than the fridge holds. Loud on purpose:
+   this is the shape of the bug that once wiped 3 kg of potatoes. */
+.cook-warning {
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: var(--radius-md, 8px);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  background-color: rgba(239, 68, 68, 0.12);
+  font-size: 0.85rem;
+}
+
+.cook-source-tag {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted-text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  padding: 0.05rem 0.45rem;
+  margin-left: 0.4rem;
+  white-space: nowrap;
+}
+
 .app-actions-row {
   display: flex;
   justify-content: flex-end;
@@ -1232,6 +1329,11 @@ main.page {
   max-width: 520px;
   width: 100%;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55);
+  /* Never taller than the viewport minus the overlay's own padding, so the
+     panel always fits and its actions stay reachable without zooming out. */
+  max-height: calc(100vh - 3rem);
+  display: flex;
+  flex-direction: column;
 }
 .modal-header {
   display: flex;
@@ -1239,6 +1341,15 @@ main.page {
   align-items: center;
   margin-bottom: 1rem;
   gap: 1rem;
+  flex-shrink: 0;
+}
+.modal-body {
+  overflow-y: auto;
+  /* Required for a flex child to be allowed to shrink below its content size. */
+  min-height: 0;
+  /* Keeps a scrollbar from sitting flush against the text. */
+  padding-right: 0.25rem;
+  margin-right: -0.25rem;
 }
 .modal-title {
   font-size: 1.2rem;

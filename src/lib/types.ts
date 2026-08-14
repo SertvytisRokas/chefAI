@@ -39,13 +39,28 @@ export interface Database {
         Row: {
           id: number;
           name: string;
+          /** Short form shown in the UI: "g", "kg", "ml". */
+          abbreviation: string | null;
+          /** 'mass' | 'volume' | 'count'. Units only convert within a dimension. */
+          dimension: string | null;
+          /** Factor to the dimension's base unit (grams / ml / pieces). */
+          to_base_factor: number | null;
+          is_active: boolean;
         };
         Insert: {
           id?: number;
           name: string;
+          abbreviation?: string | null;
+          dimension?: string | null;
+          to_base_factor?: number | null;
+          is_active?: boolean;
         };
         Update: {
           name?: string;
+          abbreviation?: string | null;
+          dimension?: string | null;
+          to_base_factor?: number | null;
+          is_active?: boolean;
         };
       };
       meal_types: {
@@ -69,6 +84,10 @@ export interface Database {
           quantity: number;
           measurement_type_id: number;
           expiration_date: string | null;
+          /** Pinned staple: kept when it hits zero, shown above the main list. */
+          favorite: boolean;
+          /** Set/cleared by a database trigger. Start of the 7-day removal window. */
+          depleted_at: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -79,6 +98,7 @@ export interface Database {
           quantity: number;
           measurement_type_id: number;
           expiration_date?: string | null;
+          favorite?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -87,7 +107,42 @@ export interface Database {
           quantity?: number;
           measurement_type_id?: number;
           expiration_date?: string | null;
-          updated_at?: string;
+          favorite?: boolean;
+        };
+      };
+      /** Global reference data. Readable by all, written only via the service role. */
+      ingredient_standards: {
+        Row: {
+          id: number;
+          name: string;
+          measurement_type_id: number;
+          aliases: string[];
+          /** e.g. "clove" for garlic. Null when the ingredient has no sub-unit. */
+          sub_unit: string | null;
+          /** e.g. 10 cloves per bulb. Always set together with sub_unit. */
+          sub_units_per_unit: number | null;
+          category: string | null;
+          typical_shelf_life_days: number | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: number;
+          name: string;
+          measurement_type_id: number;
+          aliases?: string[];
+          sub_unit?: string | null;
+          sub_units_per_unit?: number | null;
+          category?: string | null;
+          typical_shelf_life_days?: number | null;
+        };
+        Update: {
+          measurement_type_id?: number;
+          aliases?: string[];
+          sub_unit?: string | null;
+          sub_units_per_unit?: number | null;
+          category?: string | null;
+          typical_shelf_life_days?: number | null;
         };
       };
       user_allergens: {
@@ -144,9 +199,14 @@ export interface Database {
           user_id: string;
           title: string;
           meal_type_id: number | null;
+          /** RecipeIngredientPayload[] — see src/lib/llmTypes.ts. */
           ingredients: any;
           steps: any;
           created_at: string;
+          rating: number | null;
+          feedback: string | null;
+          diet_type_id: number | null;
+          favorite: boolean | null;
         };
         Insert: {
           id?: string;
@@ -156,12 +216,20 @@ export interface Database {
           ingredients?: any;
           steps?: any;
           created_at?: string;
+          rating?: number | null;
+          feedback?: string | null;
+          diet_type_id?: number | null;
+          favorite?: boolean | null;
         };
         Update: {
           title?: string;
           meal_type_id?: number | null;
           ingredients?: any;
           steps?: any;
+          rating?: number | null;
+          feedback?: string | null;
+          diet_type_id?: number | null;
+          favorite?: boolean | null;
         };
       };
       blog_genres: {

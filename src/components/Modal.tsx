@@ -35,7 +35,10 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
             ✕
           </button>
         </div>
-        <div>{children}</div>
+        {/* Scrolls independently so a long body can never push the actions
+            below the fold — with many ingredients the confirm buttons used to
+            end up off-screen entirely. */}
+        <div className="modal-body">{children}</div>
       </div>
     </div>
   );

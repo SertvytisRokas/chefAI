@@ -73,7 +73,19 @@ Instructions — aim for the balance a good recipe book strikes:
 - Prefer the straightforward version of a dish over an elaborate one unless the user asked for elaborate.
 
 Write quantities for exactly ${portionText}. Avoid generic phrases such as "for each serving".
-Format your response as JSON with the keys: title (string), ingredients (array of objects with "name" and "quantity" fields), steps (array of strings), and dietType (string). For dietType you must choose exactly one of: vegan, vegetarian, pescatarian, omnivore — based on the ingredients and preparation of this recipe (vegan: no animal products; vegetarian: may include dairy/eggs but no meat or fish; pescatarian: may include fish/seafood but no meat; omnivore: may include meat). The JSON must be strictly valid (no trailing commas) and use double quotes for all keys and string values. Do not include any commentary outside the JSON.
+Format your response as JSON with the keys: title (string), ingredients (array), steps (array of strings), and dietType (string).
+
+Each ingredient is an object with three separate fields:
+- "name": the ingredient alone, with no amount in it. "potatoes", not "200g potatoes".
+- "amount": a NUMBER, never a string, never a range, never a fraction like "1/2" — write 0.5. Use null only when the recipe genuinely has no measurable amount, as with salt to taste.
+- "unit": the unit as a string, e.g. "grams", "ml", "pieces", "tbsp", "cloves". Use null when amount is null.
+
+Example of a correct ingredients array:
+[{"name":"potatoes","amount":200,"unit":"grams"},{"name":"garlic","amount":2,"unit":"cloves"},{"name":"salt","amount":null,"unit":null}]
+
+Keeping the number separate from the unit is required — the app does arithmetic on these values, and an amount buried in text cannot be used.
+
+For dietType you must choose exactly one of: vegan, vegetarian, pescatarian, omnivore — based on the ingredients and preparation of this recipe (vegan: no animal products; vegetarian: may include dairy/eggs but no meat or fish; pescatarian: may include fish/seafood but no meat; omnivore: may include meat). The JSON must be strictly valid (no trailing commas) and use double quotes for all keys and string values. Do not include any commentary outside the JSON.
 
 Here are some similar recipes for inspiration:
 ${templatesText}
@@ -161,7 +173,9 @@ export async function generateWeeklyPlan(
     `Create a seven‑day meal plan (Monday through Sunday) with breakfast, lunch and dinner each day.\n` +
     `The plan should prioritise using ingredients that will expire soon and avoid suggesting meals that require many additional ingredients.\n` +
     `Each meal needs clear step-by-step instructions. Because this response covers 21 meals, keep every meal tight: 4 to 7 steps, never more than 8. Each step is one distinct action — do not merge several actions into one step, and do not pad with trivial steps like "wash the vegetables" or "gather your ingredients". One or two sentences per step. Avoid generic phrases like \"for each serving\"; tailor instructions to the number of portions.\n` +
-    `Output JSON with a single key \"week\" which is an array of objects. Each object has a \"day\" string and a \"meals\" array. Each meal has \"mealType\" (breakfast, lunch, dinner), \"title\", \"ingredients\" (array of {name, quantity}), \"steps\" (array of strings), and \"dietType\" (string). For dietType of each meal you must choose exactly one of: vegan, vegetarian, pescatarian, omnivore — based on the ingredients and preparation of that meal (vegan: no animal products; vegetarian: may include dairy/eggs but no meat or fish; pescatarian: may include fish/seafood but no meat; omnivore: may include meat). Do not include any commentary outside the JSON.\n\n` +
+    `Output JSON with a single key \"week\" which is an array of objects. Each object has a \"day\" string and a \"meals\" array. Each meal has \"mealType\" (breakfast, lunch, dinner), \"title\", \"ingredients\", \"steps\" (array of strings), and \"dietType\" (string).\n` +
+    `Each ingredient is an object with three separate fields: \"name\" (the ingredient alone, no amount inside it), \"amount\" (a NUMBER — write 0.5, never \"1/2\", never a range, and null only when there is no measurable amount such as salt to taste), and \"unit\" (a string such as \"grams\", \"ml\", \"pieces\", \"cloves\"; null when amount is null). Example: [{\"name\":\"rice\",\"amount\":300,\"unit\":\"grams\"},{\"name\":\"garlic\",\"amount\":2,\"unit\":\"cloves\"}]. The app does arithmetic on these numbers, so an amount buried in text is unusable.\n` +
+    `For dietType of each meal you must choose exactly one of: vegan, vegetarian, pescatarian, omnivore — based on the ingredients and preparation of that meal (vegan: no animal products; vegetarian: may include dairy/eggs but no meat or fish; pescatarian: may include fish/seafood but no meat; omnivore: may include meat). Do not include any commentary outside the JSON.\n\n` +
     `Here are some similar recipes for inspiration:\n${templatesText}\n\nJSON:`;
 
   const raw = await openRouterChatCompletion('weekly', prompt, 0.2);

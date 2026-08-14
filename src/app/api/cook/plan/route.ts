@@ -2,18 +2,23 @@ import { NextResponse } from 'next/server';
 import { getCurrentUser } from '../../../../lib/auth';
 import { supabaseServer } from '../../../../lib/supabase/server';
 import { loadDietContext } from '../../../../lib/dietContext';
-import { resolveCookDeductions } from '../../../../lib/scribe';
-import type { ScribeFridgeItem, ScribeRecipeIngredient } from '../../../../lib/scribe';
-import { computeRemaining, roundQuantity } from '../../../../lib/executor';
-import type { CookPlan, DeductionLine } from '../../../../lib/cookTypes';
+import { loadIngredientStandards, findStandard } from '../../../../lib/ingredientStandards';
+import { buildCookPlan } from '../../../../lib/cookPlanner';
+import type { FridgeEntry } from '../../../../lib/cookPlanner';
+import { roundAmount } from '../../../../lib/units';
+import type { MeasurementType } from '../../../../lib/units';
+import type { CookPlan } from '../../../../lib/cookTypes';
 
 /**
  * Proposes what cooking a recipe should remove from the fridge.
  *
  * Read-only: this route never writes. It loads the recipe and fridge from the
  * database (never from the client, so a caller cannot deduct against someone
- * else's rows or an invented recipe), asks the Kitchen Scribe to resolve them,
- * and returns a plan for the user to confirm. `/api/cook/apply` does the write.
+ * else's rows or an invented recipe), builds a plan, and returns it for the
+ * user to confirm. `/api/cook/apply` does the write.
+ *
+ * Most of the work here is deterministic — see `cookPlanner.ts`. A model is
+ * reached only for recipe lines the standards dictionary could not settle.
  */
 export async function POST(request: Request) {
   const user = await getCurrentUser();
@@ -46,70 +51,60 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Recipe not found.' }, { status: 404 });
     }
 
-    const rawIngredients = Array.isArray((recipe as any).ingredients)
-      ? ((recipe as any).ingredients as any[])
-      : [];
-    const ingredients: ScribeRecipeIngredient[] = rawIngredients
-      .filter((ing) => ing && typeof ing === 'object' && typeof ing.name === 'string')
-      .map((ing) => ({
-        name: String(ing.name),
-        quantity: typeof ing.quantity === 'string' ? ing.quantity : String(ing.quantity ?? '')
-      }));
-
-    const [{ data: fridgeRows }, { data: measurementTypes }] = await Promise.all([
+    // Split into two same-shaped batches rather than one mixed Promise.all:
+    // still parallel, and far less fragile to infer.
+    const [fridgeResult, measurementResult] = await Promise.all([
       supabase
         .from('fridge_items')
         .select('id, name, quantity, measurement_type_id')
         .eq('user_id', user.id),
-      supabase.from('measurement_types').select('id, name')
+      supabase
+        .from('measurement_types')
+        .select('id, name, abbreviation, dimension, to_base_factor')
+    ]);
+    const [standards, diet] = await Promise.all([
+      loadIngredientStandards(supabase),
+      loadDietContext(supabase, user.id)
     ]);
 
-    const unitById = new Map<number, string>(
-      (measurementTypes || []).map((m: any): [number, string] => [Number(m.id), String(m.name)])
-    );
+    const fridgeRows = fridgeResult.data;
+    const measurementRows = measurementResult.data;
 
-    const fridge: ScribeFridgeItem[] = (fridgeRows || []).map((row: any) => ({
-      id: String(row.id),
+    const measurementTypes: MeasurementType[] = (measurementRows || []).map((row: any) => ({
+      id: Number(row.id),
       name: String(row.name),
-      quantity: roundQuantity(Number(row.quantity) || 0),
-      unit: unitById.get(row.measurement_type_id as number) || ''
+      abbreviation: row.abbreviation ?? null,
+      dimension: row.dimension ?? null,
+      to_base_factor: row.to_base_factor ?? null
     }));
 
-    const diet = await loadDietContext(supabase, user.id);
+    const measurementById = new Map<number, MeasurementType>(
+      measurementTypes.map((mt): [number, MeasurementType] => [mt.id, mt])
+    );
 
-    const resolution = await resolveCookDeductions(
-      String((recipe as any).title ?? 'Recipe'),
-      ingredients,
+    const fridge: FridgeEntry[] = (fridgeRows || []).map((row: any) => ({
+      id: String(row.id),
+      name: String(row.name),
+      quantity: roundAmount(Number(row.quantity) || 0),
+      measurementType: measurementById.get(Number(row.measurement_type_id)) ?? null,
+      standard: findStandard(String(row.name), standards)
+    }));
+
+    const result = await buildCookPlan({
+      recipeTitle: String((recipe as any).title ?? 'Recipe'),
+      storedIngredients: (recipe as any).ingredients,
       fridge,
-      { diet: diet.diet, allergens: diet.allergens }
-    );
-
-    const fridgeById = new Map<string, ScribeFridgeItem>(
-      fridge.map((item): [string, ScribeFridgeItem] => [item.id, item])
-    );
-    const deductions: DeductionLine[] = resolution.deductions
-      .map((entry): DeductionLine | null => {
-        const item = fridgeById.get(entry.fridgeItemId);
-        if (!item) return null;
-        return {
-          fridgeItemId: item.id,
-          name: item.name,
-          unit: item.unit,
-          before: item.quantity,
-          deduct: entry.deduct,
-          after: computeRemaining(item.quantity, entry.deduct),
-          why: entry.why
-        };
-      })
-      .filter((line): line is DeductionLine => line !== null);
+      measurementTypes,
+      standards,
+      diet: { diet: diet.diet, allergens: diet.allergens }
+    });
 
     const plan: CookPlan = {
       recipeId: String((recipe as any).id),
       recipeTitle: String((recipe as any).title ?? 'Recipe'),
-      deductions,
-      unmatched: resolution.unmatched,
-      question: resolution.question,
-      skippedModel: resolution.skippedModel
+      deductions: result.deductions,
+      unresolved: result.unresolved,
+      skippedModel: result.skippedModel
     };
 
     return NextResponse.json({ plan });
